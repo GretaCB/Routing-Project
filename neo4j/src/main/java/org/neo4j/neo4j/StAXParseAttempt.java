@@ -42,10 +42,22 @@ public class StAXParseAttempt {
 			while(streamReader.hasNext())
 			{
 				streamReader.next();
+				
 				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
 				{
-					System.out.println(streamReader.getLocalName());
-				}//end if
+					if(streamReader.getLocalName() == "tag")
+					{
+						int count = streamReader.getAttributeCount();
+						for(int i = 0; i < count; i++)
+						{
+							System.out.println("Attribute Value: " + streamReader.getAttributeValue(i));
+							System.out.println("Attribute Name: " + streamReader.getAttributeName(i));
+			                System.out.println("Attribute Namespace: " + streamReader.getAttributeNamespace(i));
+			                System.out.println("Attribute Type: " + streamReader.getAttributeType(i));
+			                System.out.println("Attribute Prefix: " + streamReader.getAttributePrefix(i));
+						}
+					}//end if(getLocalName == "tag")
+				}//end if(getEventType)
 			}//end while
 		    
 		} 
