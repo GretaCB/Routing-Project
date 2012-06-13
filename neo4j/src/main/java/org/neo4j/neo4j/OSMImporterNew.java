@@ -7,8 +7,10 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+//import org.neo4j.examples.EmbeddedNeo4jWithIndexing.RelTypes;
 import org.neo4j.graphdb.GraphDatabaseService;
 //import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -37,10 +39,10 @@ public class OSMImporterNew
 	 */
 	public enum RelTypes implements RelationshipType
 	{
-	        OSM_WAY,
+	        OSM,
+			OSM_WAY,
 	        OSM_NODE,
-	        OSM_NODENEXT,
-	        REFERENCE_NODE
+	        OSM_NODENEXT
 	}
 	
 	public static void main( final String[] args ) throws FileNotFoundException
@@ -57,10 +59,19 @@ public class OSMImporterNew
       		
       		try 
       		{
-
+      			
       			XMLStreamReader streamReader = factory.createXMLStreamReader(
       				    new FileReader(osmXmlFilePath));
-
+      			
+      			// Create sub reference node
+                Node referenceNode = graphDb.createNode();
+                graphDb.getReferenceNode().createRelationshipTo(
+                    referenceNode, RelTypes.OSM );
+      			
+                Node importNode = graphDb.createNode();
+            	referenceNode.createRelationshipTo(referenceNode, RelTypes.OSM);
+                importNode.setProperty("name", "filename+currentdate");
+                
       			while(streamReader.hasNext())
       			{
       				streamReader.next();
@@ -69,16 +80,25 @@ public class OSMImporterNew
       				{
       					if(streamReader.getLocalName() == "way")
       					{
+      						
+      						Node wayNode = graphDb.createNode();
+      						//connect new way node with its property/attributes to the import node
+      						wayNode.createRelationshipTo(importNode, RelTypes.OSM_WAY);
+      						
+      						//parse through all "way" tags and create a node for each with its properties
       						int count = streamReader.getAttributeCount();
       						for(int i = 0; i < count; i++)
       						{
-      							System.out.println("Attribute Value: " + streamReader.getAttributeValue(i));
-      							System.out.println("Attribute Name: " + streamReader.getAttributeName(i));
-      			                System.out.println("Attribute Namespace: " + streamReader.getAttributeNamespace(i));
-      			                System.out.println("Attribute Type: " + streamReader.getAttributeType(i));
-      			                System.out.println("Attribute Prefix: " + streamReader.getAttributePrefix(i));
+     			                
+      			                //set new Way node's properties
+      			                wayNode.setProperty("name", streamReader.getAttributeName(i).toString());
+      			                wayNode.setProperty("value", streamReader.getAttributeValue(i).toString());
+      					
       						}
-      					}//end if(getLocalName == "tag")
+      						
+      					
+      					
+      					}//end if(getLocalName == "way")
       				}//end if(getEventType)
       			}//end while
       		    
@@ -98,25 +118,6 @@ public class OSMImporterNew
              shutdown();
       		
       		
-        /*
-        try
-        {
-            // Create users sub reference node
-            Node referenceNode = graphDb.createNode();
-            graphDb.getReferenceNode().createRelationshipTo(
-                referenceNode, RelTypes.REFERENCE_NODE );
-            
-            Node wayNode = createAndIndexWayNode( ??? );//what do I want to pass to this method?
-            referenceNode.createRelationshipTo( wayNode,
-                RelTypes.OSM_WAY );
-            
-        }//end try
-        
-        catch
-        {
-        	
-        }
-        */
     }//end main
 	
 	
@@ -152,15 +153,5 @@ public class OSMImporterNew
         graphDb.shutdown();
     }
 	
-    /*//The following is for using the StAX API
-    try 
-	{
-		// First create a new XMLInputFactory
-		XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-		// Setup a new eventReader
-		InputStream in = new FileInputStream(configFile);
-		XMLEventReader eventReader = inputFactory.createXMLEventReader(in);
-	
-	}//end try
-	*/
+
 }//end OSMImporterNew
