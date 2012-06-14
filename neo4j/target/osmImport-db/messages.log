@@ -3680,3 +3680,36 @@ C:\Program Files\Java\jdk1.7.0\bin\..\jre\bin\server\jvm.dll
     nioneo_logical.log.1: 16.00 B
     nioneo_logical.log.active: 4.00 B
     tm_tx_log.1: 0.00 B
+2012-06-13 18:15:12.728+0000: --- STARTUP diagnostics for KernelDiagnostics:StoreFiles END ---
+2012-06-13 18:15:12.729+0000: Started - database is now available
+2012-06-13 18:15:12.730+0000: GC Monitor started. 
+2012-06-13 19:01:20.744+0000: GC Monitor: Application threads blocked for an additional 752ms [total block time: 0.752s]
+2012-06-13 19:40:50.505+0000: GC Monitor: Application threads blocked for an additional 2217503ms [total block time: 2218.255s]
+2012-06-13 19:40:54.195+0000: GC Monitor: Application threads blocked for an additional 115ms [total block time: 2218.37s]
+2012-06-13 19:41:28.452+0000: GC Monitor: Application threads blocked for an additional 3928ms [total block time: 2222.298s]
+2012-06-13 20:43:42.347+0000: GC Monitor: Application threads blocked for an additional 646ms [total block time: 2222.944s]
+2012-06-13 20:43:49.572+0000: GC Monitor: Application threads blocked for an additional 187ms [total block time: 2223.131s]
+2012-06-13 20:43:51.754+0000: GC Monitor: Application threads blocked for an additional 180ms [total block time: 2223.311s]
+2012-06-13 20:43:53.986+0000: GC Monitor: Application threads blocked for an additional 231ms [total block time: 2223.542s]
+2012-06-13 20:43:58.581+0000: GC Monitor: Application threads blocked for an additional 646ms [total block time: 2224.188s]
+2012-06-13 20:44:07.757+0000: GC Monitor: Application threads blocked for an additional 164ms [total block time: 2224.352s]
+2012-06-13 20:44:11.339+0000: GC Monitor: Application threads blocked for an additional 292ms [total block time: 2224.644s]
+2012-06-13 20:44:12.328+0000: GC Monitor: Application threads blocked for an additional 688ms [total block time: 2225.332s]
+2012-06-13 20:44:13.244+0000: GC Monitor: Application threads blocked for an additional 224ms [total block time: 2225.556s]
+2012-06-13 20:44:15.173+0000: GC Monitor: Application threads blocked for an additional 927ms [total block time: 2226.483s]
+2012-06-13 20:44:16.089+0000: GC Monitor: Application threads blocked for an additional 314ms [total block time: 2226.797s]
+2012-06-13 20:44:19.495+0000: GC Monitor: Application threads blocked for an additional 304ms [total block time: 2227.101s]
+2012-06-13 20:44:21.094+0000: GC Monitor: Application threads blocked for an additional 1397ms [total block time: 2228.498s]
+2012-06-13 20:44:25.510+0000: GC Monitor: Application threads blocked for an additional 524ms [total block time: 2229.022s]
+2012-06-13 20:44:28.476+0000: GC Monitor: Application threads blocked for an additional 429ms [total block time: 2229.451s]
+2012-06-13 20:44:30.919+0000: GC Monitor: Application threads blocked for an additional 310ms [total block time: 2229.761s]
+2012-06-13 20:44:31.330+0000: GC Monitor: Application threads blocked for an additional 109ms [total block time: 2229.87s]
+2012-06-13 20:44:37.502+0000: GC Monitor: Application threads blocked for an additional 167ms [total block time: 2230.037s]
+2012-06-13 20:44:38.074+0000: Stopping - database is now unavailable
+2012-06-13 20:44:38.174+0000: GC Monitor stopped. 
+2012-06-13 20:44:38.993+0000: TM shutting down
+2012-06-13 20:44:39.464+0000: Closed log C:\java\workspace_uDigSDK\neo4j\target\osmImport-db\index\lucene.log
+2012-06-13 20:44:41.828+0000: Closed log C:\java\workspace_uDigSDK\neo4j\target\osmImport-db\nioneo_logical.log
+2012-06-13 20:44:49.949+0000: NeoStore closed
+2012-06-13 20:44:49.950+0000: --- SHUTDOWN diagnostics START ---
+2012-06-13 20:44:49.950+0000: --- SHUTDOWN diagnostics END ---

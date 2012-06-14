@@ -14,6 +14,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.index.Index;
 //import org.neo4j.graphdb.index.Index;
 //import org.neo4j.neo4j.OSMway;
 
@@ -23,8 +24,9 @@ public class OSMImporterNew
 	private static final String osmImport_DB = "target/osmImport-db";
 	private static GraphDatabaseService graphDb;
 	private static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
-    //private static Index<Node> nodeIndex;//will I need to create my own index? Or is this done automatically?
-    
+    private static Index<Node> nodeIdIndex;
+    private static final String NODE_ID = "node_id";
+    private static Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
 	
 	
 	//Elements and attributes to be read from the XML file
@@ -49,7 +51,7 @@ public class OSMImporterNew
     {
         // START SNIPPET: startDb
         graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( osmImport_DB );
-        //nodeIndex = graphDb.index().forNodes( "nodes" ); //what is stored in this variable?
+        nodeIdIndex = graphDb.index().forNodes( "nodeIds" ); 
         registerShutdownHook();
         XMLInputFactory factory = XMLInputFactory.newInstance();
         // END SNIPPET: startDb
@@ -63,14 +65,19 @@ public class OSMImporterNew
       			XMLStreamReader streamReader = factory.createXMLStreamReader(
       				    new FileReader(osmXmlFilePath));
       			
-      			// Create sub reference node
+      			// Create reference node
                 Node referenceNode = graphDb.createNode();
                 graphDb.getReferenceNode().createRelationshipTo(
                     referenceNode, RelTypes.OSM );
       			
+                //Create Routing node and connect to Reference node
+                Node routingNode = graphDb.createNode();
+                referenceNode.createRelationshipTo( routingNode, RelTypes.OSM);
+                
+                //Create import node and connect to Routing node
                 Node importNode = graphDb.createNode();
-            	referenceNode.createRelationshipTo(referenceNode, RelTypes.OSM);
-                importNode.setProperty("name", "filename+currentdate");
+            	routingNode.createRelationshipTo(importNode, RelTypes.OSM);
+                importNode.setProperty("name", "filename+filesize+currentdate");
                 
       			while(streamReader.hasNext())
       			{
@@ -83,18 +90,62 @@ public class OSMImporterNew
       						
       						Node wayNode = graphDb.createNode();
       						//connect new way node with its property/attributes to the import node
-      						wayNode.createRelationshipTo(importNode, RelTypes.OSM_WAY);
+      						importNode.createRelationshipTo(wayNode, RelTypes.OSM_WAY);
       						
       						//parse through all "way" tags and create a node for each with its properties
       						int count = streamReader.getAttributeCount();
       						for(int i = 0; i < count; i++)
       						{
-     			                
       			                //set new Way node's properties
       			                wayNode.setProperty("name", streamReader.getAttributeName(i).toString());
       			                wayNode.setProperty("value", streamReader.getAttributeValue(i).toString());
-      					
-      						}
+      			                
+      			                //go to next node
+      			                streamReader.next();
+      			                
+      			                //create corresponding "nd" nodes and their properties
+      			                if(streamReader.getLocalName() == "nd")
+      			                {
+      			                	//int n = 1;
+      			                	
+      			                	//Check whether or not the specific node was already created by checking for its id within index
+      			                	if(!idPresent(streamReader.getAttributeValue(0).toString()))
+      			                	{
+      			                		Node node = graphDb.createNode();
+      			                		wayNode.createRelationshipTo( node, RelTypes.OSM_NODE);
+      			                		//set new Node's properties
+      			                		node.setProperty("name", streamReader.getAttributeName(0).toString());
+      			                		node.setProperty("value", streamReader.getAttributeValue(0).toString());
+      			                		priorNode = node;
+      			                	}
+      			                	
+      			                	//go to next node
+      			                	streamReader.next();
+      			                	
+      			                	while(streamReader.getLocalName() == "nd")
+      			                	{
+      			                		Node nd = createAndIndexNode(streamReader.getAttributeValue(0).toString());
+      			                		priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
+          			                	
+      			                		
+      			                		//set new Node's properties
+          			                	nd.setProperty("name", streamReader.getAttributeName(0).toString());
+          			                	nd.setProperty("value", streamReader.getAttributeValue(0).toString());
+      			                	
+          			                	priorNode = nd;
+      			                	}//end while "nd"
+      			                	
+      			                }// end if(streamReader.getLocalName()
+      			                
+      			                //Do I need to create a node for "tag" elements?
+      			                //I think I do because they contain relevant routing information
+      			                if(streamReader.getLocalName()== "tag")
+      			                {
+      			                	//create tag nodes and set properties...key and value
+      			                	//Create a separate class to check for relevant tag values for routing
+      			                }
+      			                
+      						}// end for(int i=0; i....)
       						
       					
       					
@@ -110,27 +161,15 @@ public class OSMImporterNew
       		    e.printStackTrace();
       		}
       		
-      		 finally
-             {
+      		finally
+            {
                  tx.finish();
-             }
-             System.out.println( "Shutting down database ..." );
-             shutdown();
+            }
+            System.out.println( "Shutting down database ..." );
+            shutdown();
       		
       		
     }//end main
-	
-	
-	/*
-	//what data or properties should be within 
-	private static Node createAndIndexWayNode( final String ??? )
-	{
-	    Node node = graphDb.createNode();
-	    node.setProperty( USERNAME_KEY, username );
-	    nodeIndex.add( node, USERNAME_KEY, username );
-	    return node;
-	}
-	*/
 	
 	
 	private static void registerShutdownHook()
@@ -153,5 +192,26 @@ public class OSMImporterNew
         graphDb.shutdown();
     }
 	
+    //index "nd" elements and their node id
+    private static Node createAndIndexNode( final String id )
+    {
+        Node node = graphDb.createNode();
+        node.setProperty( NODE_ID, id );
+        nodeIdIndex.add( node, NODE_ID, id );
+        return node;
+    }//end createAndIndexNode()
 
+    
+    private static boolean idPresent(String id)
+    {
+    	/*
+    	 * Parse through index??
+    	 * 
+    	 * if id is already indexed
+    		return true;
+    	
+    		else return false;
+    	*/
+    }//end idPresent()
+    
 }//end OSMImporterNew
