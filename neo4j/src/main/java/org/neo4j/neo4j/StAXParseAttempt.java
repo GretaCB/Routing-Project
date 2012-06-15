@@ -2,6 +2,7 @@ package org.neo4j.neo4j;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 //import java.io.FileReader;
 //import java.io.Reader;
 import java.io.InputStream;
@@ -11,6 +12,7 @@ import java.util.Iterator;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 //import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.events.Attribute;
@@ -35,14 +37,17 @@ public class StAXParseAttempt {
 	        OSM_NODENEXT
 	}
 	
-	private static final String osmImport_DB = "target/osmImport-db";
-	private GraphDatabaseService graphDb;
+	//private static final String osmImport_DB = "target/osmStaxImport-db";
+	//private GraphDatabaseService graphDb;
 	private static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
 	
-	/*
+	
 	public static void main(String[] args) throws FileNotFoundException, XMLStreamException 
 	{
+		XMLInputFactory factory = XMLInputFactory.newInstance();
 		
+		
+		/*
 	    // START SNIPPET: startDb
 	    graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
 	    registerShutdownHook( graphDb );
@@ -112,7 +117,7 @@ public class StAXParseAttempt {
 		
 		
 		
-		
+		*/
 		
 		
 		//get Reader connected to XML input from somewhere..
@@ -127,7 +132,7 @@ public class StAXParseAttempt {
 		XMLStreamReader parser = factory.createXMLStreamReader(in);
 		 * 
 		 */
-		/*
+		
 		try 
 		{
 
@@ -140,7 +145,7 @@ public class StAXParseAttempt {
 				
 				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
 				{
-					if(streamReader.getLocalName() == "tag")
+					if(streamReader.getLocalName() == "way")
 					{
 						int count = streamReader.getAttributeCount();
 						for(int i = 0; i < count; i++)
@@ -151,7 +156,21 @@ public class StAXParseAttempt {
 			                System.out.println("Attribute Type: " + streamReader.getAttributeType(i));
 			                System.out.println("Attribute Prefix: " + streamReader.getAttributePrefix(i));
 						}
-					}//end if(getLocalName == "tag")
+					}//end if(getLocalName == "way")
+					
+					if(streamReader.getLocalName() == "nd")
+					{
+						System.out.println("NODE**************************");
+						int count = streamReader.getAttributeCount();
+						for(int i = 0; i < count; i++)
+						{
+							System.out.println("Attribute Value: " + streamReader.getAttributeValue(i));
+							System.out.println("Attribute Name: " + streamReader.getAttributeName(i));
+			                System.out.println("Attribute Namespace: " + streamReader.getAttributeNamespace(i));
+			                System.out.println("Attribute Type: " + streamReader.getAttributeType(i));
+			                System.out.println("Attribute Prefix: " + streamReader.getAttributePrefix(i));
+						}
+					}//end if(getLocalName == "way")
 				}//end if(getEventType)
 			}//end while
 		    
@@ -166,5 +185,5 @@ public class StAXParseAttempt {
 		
 		
 	}//end main
- */
+ 
 }//end StAXParseAttempt class

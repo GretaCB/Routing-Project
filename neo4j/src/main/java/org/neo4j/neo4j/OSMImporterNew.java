@@ -15,6 +15,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
+import org.neo4j.graphdb.index.IndexHits;
 //import org.neo4j.graphdb.index.Index;
 //import org.neo4j.neo4j.OSMway;
 
@@ -28,12 +29,6 @@ public class OSMImporterNew
     private static final String NODE_ID = "node_id";
     private static Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
 	
-	
-	//Elements and attributes to be read from the XML file
-	static final String ND = "nd";
-	static final String TAG = "tag";
-	static final String K = "k";
-	static final String V = "v";
 
 	
 	/**
@@ -43,7 +38,6 @@ public class OSMImporterNew
 	{
 	        OSM,
 			OSM_WAY,
-	        OSM_NODE,
 	        OSM_NODENEXT
 	}
 	
@@ -65,14 +59,10 @@ public class OSMImporterNew
       			XMLStreamReader streamReader = factory.createXMLStreamReader(
       				    new FileReader(osmXmlFilePath));
       			
-      			// Create reference node
-                Node referenceNode = graphDb.createNode();
-                graphDb.getReferenceNode().createRelationshipTo(
-                    referenceNode, RelTypes.OSM );
-      			
-                //Create Routing node and connect to Reference node
+      		    //Create Routing node and connect to Reference node
                 Node routingNode = graphDb.createNode();
-                referenceNode.createRelationshipTo( routingNode, RelTypes.OSM);
+                graphDb.getReferenceNode().createRelationshipTo(
+                    routingNode, RelTypes.OSM );
                 
                 //Create import node and connect to Routing node
                 Node importNode = graphDb.createNode();
@@ -93,64 +83,55 @@ public class OSMImporterNew
       						importNode.createRelationshipTo(wayNode, RelTypes.OSM_WAY);
       						
       						//parse through all "way" tags and create a node for each with its properties
+      						
+      						//parse though the way tag's attributes and values
       						int count = streamReader.getAttributeCount();
       						for(int i = 0; i < count; i++)
-      						{
-      			                //set new Way node's properties
-      			                wayNode.setProperty("name", streamReader.getAttributeName(i).toString());
-      			                wayNode.setProperty("value", streamReader.getAttributeValue(i).toString());
+      						{    
+      							//set new Way node's properties
+      			                wayNode.setProperty("name" + i, streamReader.getAttributeName(i).toString());
+      			                wayNode.setProperty("value" + i, streamReader.getAttributeValue(i).toString());
       			                
-      			                //go to next node
-      			                streamReader.next();
-      			                
-      			                //create corresponding "nd" nodes and their properties
-      			                if(streamReader.getLocalName() == "nd")
-      			                {
-      			                	//int n = 1;
-      			                	
-      			                	//Check whether or not the specific node was already created by checking for its id within index
-      			                	if(!idPresent(streamReader.getAttributeValue(0).toString()))
-      			                	{
-      			                		Node node = graphDb.createNode();
-      			                		wayNode.createRelationshipTo( node, RelTypes.OSM_NODE);
-      			                		//set new Node's properties
-      			                		node.setProperty("name", streamReader.getAttributeName(0).toString());
-      			                		node.setProperty("value", streamReader.getAttributeValue(0).toString());
-      			                		priorNode = node;
-      			                	}
-      			                	
-      			                	//go to next node
-      			                	streamReader.next();
-      			                	
-      			                	while(streamReader.getLocalName() == "nd")
-      			                	{
-      			                		Node nd = createAndIndexNode(streamReader.getAttributeValue(0).toString());
-      			                		priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
-          			                	
-      			                		
-      			                		//set new Node's properties
-          			                	nd.setProperty("name", streamReader.getAttributeName(0).toString());
-          			                	nd.setProperty("value", streamReader.getAttributeValue(0).toString());
-      			                	
-          			                	priorNode = nd;
-      			                	}//end while "nd"
-      			                	
-      			                }// end if(streamReader.getLocalName()
-      			                
-      			                //Do I need to create a node for "tag" elements?
-      			                //I think I do because they contain relevant routing information
-      			                if(streamReader.getLocalName()== "tag")
-      			                {
-      			                	//create tag nodes and set properties...key and value
-      			                	//Create a separate class to check for relevant tag values for routing
-      			                }
-      			                
-      						}// end for(int i=0; i....)
-      						
+      						}
       					
-      					
+      						priorNode = wayNode;
       					}//end if(getLocalName == "way")
-      				}//end if(getEventType)
+
+      					
+      					
+      					
+      			        //create corresponding "nd" nodes and their properties
+      			        if(streamReader.getLocalName() == "nd")
+      			        {
+      			            Node nd;
+  			                //Check whether or not the specific node was already created by checking for its id within index
+  			               	if(!idPresent(streamReader.getAttributeValue(0).toString()))
+  			              	    nd = createAndIndexNode(streamReader.getAttributeValue(0).toString());
+  			               	
+  			               	//How do I assign the address of the indexed node to this local node ("nd")?
+  			               	else
+  			               	{
+  			               		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
+  			               		nd = indexedNode.getSingle();
+  			               	}
+  			               	
+  			               	priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
+  			               	priorNode = nd;
+      			               		
+      			        }// end if(streamReader.getLocalName() == "nd"
+      			                
+      			        
+      			        
+      			        //Do I need to create a node for "tag" elements?
+      			        //I think I do because they contain relevant routing information
+      			        if(streamReader.getLocalName()== "tag")
+      			        {
+      			            //create tag nodes and set properties...key and value
+      			            //Create a separate class to check for relevant tag values for routing
+      			        }//end if(streamReader.getLocalNale() == "tag"
+      			                
+   
+      				}//end if(streamReader.getEventType)
       			}//end while
       		    
       		  tx.success();
@@ -204,14 +185,13 @@ public class OSMImporterNew
     
     private static boolean idPresent(String id)
     {
-    	/*
-    	 * Parse through index??
-    	 * 
-    	 * if id is already indexed
+    	IndexHits<Node> check = nodeIdIndex.get( NODE_ID, id );
+    	if(check == null)
     		return true;
     	
-    		else return false;
-    	*/
+    	else 
+    		return false;
+    	
     }//end idPresent()
     
 }//end OSMImporterNew
