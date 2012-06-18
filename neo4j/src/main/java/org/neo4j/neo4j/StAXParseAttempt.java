@@ -1,29 +1,29 @@
 package org.neo4j.neo4j;
 
-import java.io.FileInputStream;
+//import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 //import java.io.FileReader;
 //import java.io.Reader;
-import java.io.InputStream;
+//import java.io.InputStream;
 //import java.util.ArrayList;
-import java.util.Iterator;
+//import java.util.Iterator;
 //import java.util.List;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 //import javax.xml.stream.XMLStreamReader;
-import javax.xml.stream.XMLEventReader;
-import javax.xml.stream.events.Attribute;
+//import javax.xml.stream.XMLEventReader;
+//import javax.xml.stream.events.Attribute;
 //import javax.xml.stream.events.EndElement;
-import javax.xml.stream.events.StartElement;
-import javax.xml.stream.events.XMLEvent;
+//import javax.xml.stream.events.StartElement;
+//import javax.xml.stream.events.XMLEvent;
 
-import org.neo4j.graphdb.GraphDatabaseService;
+//import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.neo4j.OSMway;
+//import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+//import org.neo4j.neo4j.OSMway;
 
 public class StAXParseAttempt {
 

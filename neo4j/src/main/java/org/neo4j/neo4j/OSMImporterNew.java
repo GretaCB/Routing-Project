@@ -75,6 +75,16 @@ public class OSMImporterNew
       				
       				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
       				{
+      					if(streamReader.getLocalName() == "node")
+       			        {
+       			        	//Check whether or not the specific node was already created by checking for its id within index
+   			               	if(!idPresent(streamReader.getAttributeValue(0).toString()))
+   			              	    createAndIndexNode(streamReader.getAttributeValue(0).toString());
+   			               	
+       			        }
+      					
+      					
+      					
       					if(streamReader.getLocalName() == "way")
       					{
       						
@@ -103,7 +113,10 @@ public class OSMImporterNew
       			        if(streamReader.getLocalName() == "nd")
       			        {
       			            Node nd;
-  			               	
+      			            //**************************************
+      			            //**************FIX THIS****************
+      			            //**************************************
+  			               	//Have to fix this. It is pointing from the index "node" as part of the "way"...have to transfer the info over somehow...
   			               	IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
   			               	nd = indexedNode.getSingle();
   			               	
@@ -124,13 +137,7 @@ public class OSMImporterNew
       			        }//end if(streamReader.getLocalNale() == "tag"
       			           
       			        
-      			        if(streamReader.getLocalName() == "node")
-      			        {
-      			        	//Check whether or not the specific node was already created by checking for its id within index
-  			               	if(!idPresent(streamReader.getAttributeValue(0).toString()))
-  			              	    createAndIndexNode(streamReader.getAttributeValue(0).toString());
-  			               	
-      			        }
+      			       
    
       				}//end if(streamReader.getEventType)
       			}//end while
