@@ -89,8 +89,7 @@ public class OSMImporterNew
       						for(int i = 0; i < count; i++)
       						{    
       							//set new Way node's properties
-      			                wayNode.setProperty("name" + i, streamReader.getAttributeName(i).toString());
-      			                wayNode.setProperty("value" + i, streamReader.getAttributeValue(i).toString());
+      			                wayNode.setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
       			                
       						}
       					
@@ -104,16 +103,10 @@ public class OSMImporterNew
       			        if(streamReader.getLocalName() == "nd")
       			        {
       			            Node nd;
-  			                //Check whether or not the specific node was already created by checking for its id within index
-  			               	if(!idPresent(streamReader.getAttributeValue(0).toString()))
-  			              	    nd = createAndIndexNode(streamReader.getAttributeValue(0).toString());
   			               	
-  			               	//How do I assign the address of the indexed node to this local node ("nd")?
-  			               	else
-  			               	{
-  			               		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
-  			               		nd = indexedNode.getSingle();
-  			               	}
+  			               	IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
+  			               	nd = indexedNode.getSingle();
+  			               	
   			               	
   			               	priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
   			               	priorNode = nd;
@@ -129,7 +122,15 @@ public class OSMImporterNew
       			            //create tag nodes and set properties...key and value
       			            //Create a separate class to check for relevant tag values for routing
       			        }//end if(streamReader.getLocalNale() == "tag"
-      			                
+      			           
+      			        
+      			        if(streamReader.getLocalName() == "node")
+      			        {
+      			        	//Check whether or not the specific node was already created by checking for its id within index
+  			               	if(!idPresent(streamReader.getAttributeValue(0).toString()))
+  			              	    createAndIndexNode(streamReader.getAttributeValue(0).toString());
+  			               	
+      			        }
    
       				}//end if(streamReader.getEventType)
       			}//end while
@@ -173,13 +174,13 @@ public class OSMImporterNew
         graphDb.shutdown();
     }
 	
-    //index "nd" elements and their node id
-    private static Node createAndIndexNode( final String id )
+    //index "node" elements and their node id
+    private static void createAndIndexNode( final String id )
     {
         Node node = graphDb.createNode();
         node.setProperty( NODE_ID, id );
         nodeIdIndex.add( node, NODE_ID, id );
-        return node;
+        
     }//end createAndIndexNode()
 
     
