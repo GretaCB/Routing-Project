@@ -112,17 +112,16 @@ public class OSMImporterNew
       			        //create corresponding "nd" nodes and their properties
       			        if(streamReader.getLocalName() == "nd")
       			        {
-      			            Node nd;
+      			            
       			            //**************************************
       			            //**************FIX THIS****************
       			            //**************************************
   			               	//Have to fix this. It is pointing from the index "node" as part of the "way"...have to transfer the info over somehow...
   			               	IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
-  			               	nd = indexedNode.getSingle();
   			               	
   			               	
-  			               	priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
-  			               	priorNode = nd;
+  			               	priorNode.createRelationshipTo( indexedNode.getSingle(), RelTypes.OSM_NODENEXT);
+  			               	priorNode = indexedNode.getSingle();
       			               		
       			        }// end if(streamReader.getLocalName() == "nd"
       			                
