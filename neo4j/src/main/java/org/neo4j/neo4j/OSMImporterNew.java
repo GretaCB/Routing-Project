@@ -131,7 +131,7 @@ public class OSMImporterNew
       			}//end while
       		    
       			//Parse through graphDb again to add Node Info to indexed nodes
-      			//getNodeInfo();
+      			getNodeInfo();
       			
       		  tx.success();
       		} 
@@ -224,8 +224,14 @@ public class OSMImporterNew
   			              		int count = streamReader.getAttributeCount();
   			              		for(int i = 1; i < count; i++)
   			              		{    
-  			              		
-  			              			((XMLInputFactory) indexedNode).setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
+  			              			//****************
+  			              			//****FIX THIS****
+  			              			//****************
+  			              			//Not sure how to access the indexed node to updates its properties....casting doesn't work
+  			              			//Is an index even made up of nodes? What is an index made up of?
+  			              			//...Maybe I dont need to check the index...Maybe I need to traverse the graphDb to update the "nd" node.
+  			              			
+  			              			//((Node) indexedNode).setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
       			                
   			              		}
   			              		
