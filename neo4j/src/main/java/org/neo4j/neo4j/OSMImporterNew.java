@@ -25,8 +25,8 @@ public class OSMImporterNew
     private static Index<Node> nodeIdIndex;
     private static final String NODE_ID = "node_id";
     private static Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
-	
-
+	private static Node currentWayNode;
+	private static boolean wayNested;
 	
 	/**
 	 * @param args
@@ -71,7 +71,6 @@ public class OSMImporterNew
       				
       				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
       				{
-      				
       					
       					if(streamReader.getLocalName() == "way")
       					{
@@ -92,6 +91,8 @@ public class OSMImporterNew
       						}
       					
       						priorNode = wayNode;
+      						currentWayNode = wayNode;
+      						wayNested = true;
       					}//end if(getLocalName == "way")
 
       					
@@ -122,12 +123,26 @@ public class OSMImporterNew
       			        
       			        //Do I need to create a node for "tag" elements?
       			        //I think I do because they contain relevant routing information
-      			        if(streamReader.getLocalName()== "tag")
+      			        //*****************************************************************
+      			        //*****************************************************************
+      			        //Would have to somehow know I am still nested within a Way element
+      			        //*****************************************************************
+      			        //*****************************************************************
+      			        if(streamReader.getLocalName()== "tag" && wayNested == true)
       			        {
-      			            //create tag nodes and set properties...key and value
-      			            //Create a separate class to check for relevant tag values for routing
-      			        }//end if(streamReader.getLocalNale() == "tag"
+      			        	int count = streamReader.getAttributeCount();
+      						for(int i = 0; i < count; i++)
+      						{
+      							//add relevant tags to wayNode attribute list
+      							currentWayNode.setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
+      						}
+      			        }//end if(streamReader.getLocalName() == "tag"
       				}//end if(streamReader.getEventType)
+      				
+      				//Check to see if still nested within way element
+      				if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName() == "way")
+      					wayNested = false;
+      					
       			}//end while
       		    
       			//Parse through graphDb again to add Node Info to indexed nodes
@@ -219,7 +234,7 @@ public class OSMImporterNew
   							//Copy over its info to the indexed node
   			              	if(idPresent(streamReader.getAttributeValue(0).toString()))
   			              	{
-  			              		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
+  			              		//IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
   			              		
   			              		int count = streamReader.getAttributeCount();
   			              		for(int i = 1; i < count; i++)
