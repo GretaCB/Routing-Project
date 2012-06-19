@@ -7,17 +7,14 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
-//import org.neo4j.examples.EmbeddedNeo4jWithIndexing.RelTypes;
 import org.neo4j.graphdb.GraphDatabaseService;
-//import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
-//import org.neo4j.graphdb.index.Index;
-//import org.neo4j.neo4j.OSMway;
+
 
 public class OSMImporterNew 
 {
@@ -50,7 +47,6 @@ public class OSMImporterNew
         XMLInputFactory factory = XMLInputFactory.newInstance();
         // END SNIPPET: startDb
 
-        // START SNIPPET: addUsers
         Transaction tx = graphDb.beginTx();
       		
       		try 
@@ -75,15 +71,7 @@ public class OSMImporterNew
       				
       				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
       				{
-      					if(streamReader.getLocalName() == "node")
-       			        {
-       			        	//Check whether or not the specific node was already created by checking for its id within index
-   			               	if(!idPresent(streamReader.getAttributeValue(0).toString()))
-   			              	    createAndIndexNode(streamReader.getAttributeValue(0).toString());
-   			               	
-       			        }
-      					
-      					
+      				
       					
       					if(streamReader.getLocalName() == "way")
       					{
@@ -113,15 +101,20 @@ public class OSMImporterNew
       			        if(streamReader.getLocalName() == "nd")
       			        {
       			            
-      			            //**************************************
-      			            //**************FIX THIS****************
-      			            //**************************************
-  			               	//Have to fix this. It is pointing from the index "node" as part of the "way"...have to transfer the info over somehow...
-  			               	IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
-  			               	
-  			               	
-  			               	priorNode.createRelationshipTo( indexedNode.getSingle(), RelTypes.OSM_NODENEXT);
-  			               	priorNode = indexedNode.getSingle();
+      			        	Node nd;
+			                //Check whether or not the specific node was already created by checking for its id within index
+			               	if(!idPresent(streamReader.getAttributeValue(0).toString()))
+			              	    nd = createAndIndexNode(streamReader.getAttributeValue(0).toString());
+			               	
+			               	//How do I assign the address of the indexed node to this local node ("nd")?
+			               	else
+			               	{
+			               		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
+			               		nd = indexedNode.getSingle();
+			               	}
+			               	
+			               	priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
+			               	priorNode = nd;
       			               		
       			        }// end if(streamReader.getLocalName() == "nd"
       			                
@@ -134,13 +127,12 @@ public class OSMImporterNew
       			            //create tag nodes and set properties...key and value
       			            //Create a separate class to check for relevant tag values for routing
       			        }//end if(streamReader.getLocalNale() == "tag"
-      			           
-      			        
-      			       
-   
       				}//end if(streamReader.getEventType)
       			}//end while
       		    
+      			//Parse through graphDb again to add Node Info to indexed nodes
+      			//getNodeInfo();
+      			
       		  tx.success();
       		} 
       		
@@ -159,6 +151,7 @@ public class OSMImporterNew
       		
     }//end main
 	
+
 	
 	private static void registerShutdownHook()
 	{
@@ -180,25 +173,83 @@ public class OSMImporterNew
         graphDb.shutdown();
     }
 	
-    //index "node" elements and their node id
-    private static void createAndIndexNode( final String id )
+    //index "nd" elements and their node id
+    protected static Node createAndIndexNode( final String id )
     {
         Node node = graphDb.createNode();
         node.setProperty( NODE_ID, id );
         nodeIdIndex.add( node, NODE_ID, id );
-        
+        return node;
     }//end createAndIndexNode()
 
     
-    private static boolean idPresent(String id)
+    protected static boolean idPresent(String id)
     {
-    	IndexHits<Node> check = nodeIdIndex.get( NODE_ID, id );
-    	if(check == null)
-    		return true;
+    	IndexHits<Node> checkForID = nodeIdIndex.get( NODE_ID, id );
+    	Node test = checkForID.getSingle();
+    	if(test == null)
+    		return false;
     	
     	else 
-    		return false;
+    		return true;
     	
     }//end idPresent()
     
+    //Parse through xml file again to gather info from indexed "Node" elements
+    private static void getNodeInfo() throws FileNotFoundException
+    {
+    	XMLInputFactory factory = XMLInputFactory.newInstance();
+		 
+		 try 
+   		 {
+   			
+   			XMLStreamReader streamReader = factory.createXMLStreamReader(
+   				    new FileReader(osmXmlFilePath));
+   			while(streamReader.hasNext())
+  			{
+  				streamReader.next();
+  				
+  				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
+  				{
+  				
+  					
+  					if(streamReader.getLocalName() == "node")
+  		   			{
+  				        	//Check whether or not the specific node was indexed within the graphDb (is in a Way)
+  							//Copy over its info to the indexed node
+  			              	if(idPresent(streamReader.getAttributeValue(0).toString()))
+  			              	{
+  			              		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
+  			              		
+  			              		int count = streamReader.getAttributeCount();
+  			              		for(int i = 1; i < count; i++)
+  			              		{    
+  			              		
+  			              			((XMLInputFactory) indexedNode).setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
+      			                
+  			              		}
+  			              		
+  			              	}//end if(idPresent...)
+  			             	    
+  		   			}
+  			        
+  			        
+  			        //Do I need to create a node for "tag" elements?
+  			        //I think I do because they contain relevant routing information
+  			        if(streamReader.getLocalName()== "tag")
+  			        {
+  			            //create tag nodes and set properties...key and value
+  			            //Create a separate class to check for relevant tag values for routing
+  			        }//end if(streamReader.getLocalNale() == "tag"
+  				}//end if(streamReader.getEventType)
+  			}//end while
+  		}//end try
+  		
+  		catch (XMLStreamException e) 
+  		{
+  		    e.printStackTrace();
+  		}
+    	
+    	
+    }//end getNodeInfo
 }//end OSMImporterNew
