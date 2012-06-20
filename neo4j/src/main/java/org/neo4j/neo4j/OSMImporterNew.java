@@ -234,7 +234,7 @@ public class OSMImporterNew
   							//Copy over its info to the indexed node
   			              	if(idPresent(streamReader.getAttributeValue(0).toString()))
   			              	{
-  			              		//IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) );
+  			              		Node indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) ).getSingle();
   			              		
   			              		int count = streamReader.getAttributeCount();
   			              		for(int i = 1; i < count; i++)
@@ -246,7 +246,7 @@ public class OSMImporterNew
   			              			//Is an index even made up of nodes? What is an index made up of?
   			              			//...Maybe I dont need to check the index...Maybe I need to traverse the graphDb to update the "nd" node.
   			              			
-  			              			//((Node) indexedNode).setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
+  			              			indexedNode.setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
       			                
   			              		}
   			              		
