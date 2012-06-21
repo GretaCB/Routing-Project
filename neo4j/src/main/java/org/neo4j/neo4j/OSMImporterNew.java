@@ -239,13 +239,7 @@ public class OSMImporterNew
   			              		int count = streamReader.getAttributeCount();
   			              		for(int i = 1; i < count; i++)
   			              		{    
-  			              			//****************
-  			              			//****FIX THIS****
-  			              			//****************
-  			              			//Not sure how to access the indexed node to updates its properties....casting doesn't work
-  			              			//Is an index even made up of nodes? What is an index made up of?
-  			              			//...Maybe I dont need to check the index...Maybe I need to traverse the graphDb to update the "nd" node.
-  			              			
+  			              			//Update indexed Nodes properties with tag information
   			              			indexedNode.setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
       			                
   			              		}
@@ -259,8 +253,7 @@ public class OSMImporterNew
   			        //I think I do because they contain relevant routing information
   			        if(streamReader.getLocalName()== "tag")
   			        {
-  			            //create tag nodes and set properties...key and value
-  			            //Create a separate class to check for relevant tag values for routing
+  	
   			        }//end if(streamReader.getLocalNale() == "tag"
   				}//end if(streamReader.getEventType)
   			}//end while
