@@ -30,12 +30,12 @@ public class OSMRoutingImporter
     private Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
 	private boolean wayNested; //used to detect whether or not the streamer is nested within a Way element
 	private boolean nodeNested = false;
-	//private static int nodeCount = 0; //used to pace committing to graph
+	private int nodeCount = 0; //used to pace committing to graph
 	private ArrayList<String> nodeList = new ArrayList<String>();
 	private Map<String, String> wayMap = new HashMap<String, String>();
 	private Map<String, String> nodeMap = new HashMap<String, String>();
 	private boolean commitToGraph = false;
-	private boolean idPresent = false;
+	private boolean idPresentTest = false;
 	
 	
 	//Constructor
@@ -92,7 +92,7 @@ public class OSMRoutingImporter
       						{    
       							//insert Way element's properties into wayMap
       			                wayMap.put(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
-      			                System.out.println("In way node block");
+      			               
       						}
       						wayNested = true;
       					}
@@ -104,7 +104,7 @@ public class OSMRoutingImporter
       			        if(streamReader.getLocalName() == "nd" && wayNested == true)
       			        {
       			        	nodeList.add(streamReader.getAttributeValue(0)); //Insert nodeID into ArrayList
-      			        	System.out.println("In nd block");
+      			        
       			        }//end if(getLocalName() == "nd"
       			        
       				     
@@ -124,7 +124,7 @@ public class OSMRoutingImporter
       			                if(streamReader.getAttributeValue(i).toString().equals("highway"))
       			                	commitToGraph = true;
       			                
-      			                System.out.println("In tag block");
+      			                
       						}//end for(int i...)
       			        }//if(streamReader.getLocalName()== "tag"...
       				}//end if(streamReader.getEventType)
@@ -139,7 +139,7 @@ public class OSMRoutingImporter
       				{
       					System.out.println("In way END_ELEMENT block");
   						Node wayNode = graphDb.createNode();
-  						//nodeCount++;
+  						nodeCount++;
   						//connect new way node with its property/attributes to the import node
   						importNode.createRelationshipTo(wayNode, RelTypes.OSM_WAY);
       					priorNode = wayNode;
@@ -179,14 +179,23 @@ public class OSMRoutingImporter
   			        	wayNested = false; //Reset Nested boolean
   			        	commitToGraph = false;
       				}//end if(streamReader.getEventType() == END.ELEMENT...
-      					
+      				
+      				//Commit after every 5000 nodes
+      				if(nodeCount >= 5000 && wayNested == false)
+      				{
+            			tx.success();
+            			nodeCount = 1;
+      				}
+      				
       			}//end while streamReader.hasNext()
       			
       			//Parse through graphDb again to add Node Info to indexed nodes
+      			System.out.println("Parsing through 2nd time for Node data...");
       			getNodeInfo();
       			
-      		  //if(nodeCount >= 5 && wayNested == false)
+      			//Commit the remaining nodes, if nodeCount < 5000
       			tx.success();
+      		
       		  
       			  
       		
@@ -207,6 +216,7 @@ public class OSMRoutingImporter
       		
       		
       		System.out.println( "Shutting down database ..." );
+      		System.out.println("nodeCount is " + nodeCount);
             shutdown();
       		
     }//end importXML
@@ -239,6 +249,7 @@ public class OSMRoutingImporter
     protected Node createAndIndexNode( final String id )
     {
         Node node = graphDb.createNode();
+        nodeCount++;
         node.setProperty( NODE_ID, id );
         nodeIdIndex.add( node, NODE_ID, id );
         return node;
@@ -284,40 +295,45 @@ public class OSMRoutingImporter
   							//Copy over its info to the indexed node
   			              	if(idPresent(streamReader.getAttributeValue(0).toString()))
   			              	{
-  			              		idPresent = true;
-  			              		priorNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0) ).getSingle();
+  			              		idPresentTest = true;
+  			              		priorNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0)).getSingle();
   			              		
+  			              		//Insert Node properties into nodeMap
   			              		int count = streamReader.getAttributeCount();
   			              		for(int i = 1; i < count; i++)
   			              		{    
-  			              			//insert tag element's properties into nodeMap
-  			              			nodeMap.put(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
+  			              			//Insert tag element's properties into nodeMap
+  			              			priorNode.setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
+  			              			//System.out.println("***************Inserted node info***************");
   			              		}
   			              		
   			              	}//end if(idPresent...)
-  			             	    
+  			             	
+  			              	else
+  			              		idPresentTest = false;
+  			              	
   		   			}//end if
   			        
   			        
-  			        if(streamReader.getLocalName()== "tag" && nodeNested == true && idPresent == true)
+  			        if(streamReader.getLocalName().equals("tag") && nodeNested == true && idPresentTest == true)
   			        {
   							//insert tag element's properties into nodeMap
   			                nodeMap.put(streamReader.getAttributeValue(0).toString(), streamReader.getAttributeValue(1).toString());
-  						
+  			                
   			        }//end if(streamReader.getLocalName() == "tag"
   			        
-  			        if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName() == "node" && idPresent == true)
+  			        if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName().equals("node") && idPresentTest == true)
   			        {
   			        	for (Map.Entry<String, String> entry : nodeMap.entrySet())
   						{
   							priorNode.setProperty(entry.getKey(), entry.getValue()); 
-  							System.out.println(entry.getKey() + " " + entry.getValue());
+  							System.out.println("****************Set Tag properties from nodeMap, hopefully!*******************");
   						}
 			            
 			            //Reset variables and data structures
   			        	nodeMap.clear(); //Reset Map for next Way element and its properties
   			        	nodeNested = false; //Reset Nested boolean
-  			        	idPresent = false;
+  			        	idPresentTest = false;
 			           
   			        }//end if streamReader.getEventType() == END.ELEMENT...
   				}//end if(streamReader.getEventType)
