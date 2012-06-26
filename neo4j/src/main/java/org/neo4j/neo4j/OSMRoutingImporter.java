@@ -22,36 +22,34 @@ import org.neo4j.neo4j.OsmRoutingRelationships.RelTypes;
 public class OSMRoutingImporter 
 {
 	//Neo4j variables
-	private static String osmImport_DB = "target/osmImport-db";
-	private static GraphDatabaseService graphDb;
-	private static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
-    private static Index<Node> nodeIdIndex;
-    private static final String NODE_ID = "node_id";
-    private static Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
-	private static boolean wayNested; //used to detect whether or not the streamer is nested within a Way element
-	private static boolean nodeNested = false;
+	private String osmImport_DB;
+	private GraphDatabaseService graphDb;
+	private String osmXmlFilePath;
+    private Index<Node> nodeIdIndex;
+    private final String NODE_ID = "node_id";
+    private Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
+	private boolean wayNested; //used to detect whether or not the streamer is nested within a Way element
+	private boolean nodeNested = false;
 	//private static int nodeCount = 0; //used to pace committing to graph
-	private static ArrayList<String> nodeList = new ArrayList<String>();
-	private static Map<String, String> wayMap = new HashMap<String, String>();
-	private static Map<String, String> nodeMap = new HashMap<String, String>();
-	private static boolean commitToGraph = false;
-	private static boolean idPresent = false;
+	private ArrayList<String> nodeList = new ArrayList<String>();
+	private Map<String, String> wayMap = new HashMap<String, String>();
+	private Map<String, String> nodeMap = new HashMap<String, String>();
+	private boolean commitToGraph = false;
+	private boolean idPresent = false;
 	
 	
-	/**
-	 * @param args
-	 */
-	
+	//Constructor
 	public OSMRoutingImporter (String filePath)
 	{
 		osmImport_DB = filePath;
 	}
 	
-
 	
-	public static void main( final String[] args ) throws FileNotFoundException
+	public void importXML(String filePath) throws FileNotFoundException
     {
-        // START SNIPPET: startDb
+    	osmXmlFilePath = filePath;
+    
+    	// START SNIPPET: startDb
         graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( osmImport_DB );
         nodeIdIndex = graphDb.index().forNodes( "nodeIds" ); 
         registerShutdownHook();
@@ -211,12 +209,13 @@ public class OSMRoutingImporter
       		System.out.println( "Shutting down database ..." );
             shutdown();
       		
-      		
-    }//end main
+    }//end importXML
 	
 
 	
-	private static void registerShutdownHook()
+
+	
+	private void registerShutdownHook()
 	{
 	        // Registers a shutdown hook for the Neo4j and index service instances
 	        // so that it shuts down nicely when the VM exits (even if you
@@ -231,13 +230,13 @@ public class OSMRoutingImporter
 	       } );
 	}//end registerShutdownHook()
 	
-    private static void shutdown()
+    private void shutdown()
     {
         graphDb.shutdown();
     }
 	
     //index "nd" elements and their node id
-    protected static Node createAndIndexNode( final String id )
+    protected Node createAndIndexNode( final String id )
     {
         Node node = graphDb.createNode();
         node.setProperty( NODE_ID, id );
@@ -245,14 +244,8 @@ public class OSMRoutingImporter
         return node;
     }//end createAndIndexNode()
 
-    
-    protected static void importXML(String filePath)
-    {
-    	osmXmlFilePath = filePath;
-    }
-    
-    
-    protected static boolean idPresent(String id)
+
+    protected boolean idPresent(String id)
     {
     	IndexHits<Node> checkForID = nodeIdIndex.get( NODE_ID, id );
     	Node test = checkForID.getSingle();
@@ -265,7 +258,7 @@ public class OSMRoutingImporter
     }//end idPresent()
     
     //Parse through xml file again to gather info from indexed "Node" elements
-    private static void getNodeInfo() throws FileNotFoundException
+    private void getNodeInfo() throws FileNotFoundException
     {
     	XMLInputFactory factory = XMLInputFactory.newInstance();
     	
