@@ -197,6 +197,7 @@ public class OSMRoutingImporter
       			//Parse through graphDb again to add Node Info to indexed nodes
       			System.out.println("Parsing through 2nd time for Node data...");
       			getNodeInfo();
+      			//testWayIndex();
       			
       			//Commit the remaining nodes, if nodeCount < 5000
       			tx.success();
@@ -271,6 +272,21 @@ public class OSMRoutingImporter
     		return true;
     	
     }//end idPresent()
+    
+    /*
+    private void testWayIndex()
+    {
+    	IndexHits<Node> hits = wayNameIndex.query("name", "*");
+    	Node testNode;
+    	int count = hits.size();
+    	for(int i = -1; i < count; i++)
+    	{
+    		testNode = hits.next();
+    		testNode.getPropertyKeys();
+    		System.out.println();
+    	}
+    }
+    */
     
     //Parse through xml file again to gather info from indexed "Node" elements
     private void getNodeInfo() throws FileNotFoundException

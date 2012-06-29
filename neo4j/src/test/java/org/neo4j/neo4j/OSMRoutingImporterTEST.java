@@ -14,11 +14,10 @@ public class OSMRoutingImporterTEST
 		String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
 		
 		OSMRoutingImporter importer = new OSMRoutingImporter(graphDbPath);
-		
-		// importXML shouldn't be a static method
+	
 		importer.importXML(osmXmlFilePath);
 		
-		// right now importXML doesn't import anything :(
+
 	}//end main
 
 }//end TEST
