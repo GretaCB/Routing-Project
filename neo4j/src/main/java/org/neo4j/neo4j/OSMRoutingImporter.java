@@ -17,6 +17,9 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.neo4j.OsmRoutingRelationships.RelTypes;
+//import org.neo4j.gis.spatial.pipes.processing.OrthodromicDistance;
+//import com.vividsolutions.jts.geom.Coordinate;
+
 
 public class OSMRoutingImporter 
 {
@@ -273,6 +276,8 @@ public class OSMRoutingImporter
     	
     }//end idPresent()
     
+    
+    
     /*
     private void testWayIndex()
     {
@@ -306,7 +311,9 @@ public class OSMRoutingImporter
   				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
   				{
   				
-  					
+  					//*******************************************************
+  					//Insert Node Element's properties into graphDB node
+  					//*******************************************************
   					if(streamReader.getLocalName() == "node")
   		   			{
   				        	nodeNested = true;
@@ -316,7 +323,9 @@ public class OSMRoutingImporter
   			              	if(idPresent(streamReader.getAttributeValue(0).toString()))
   			              	{
   			              		idPresentTest = true;
-  			              		priorNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0)).getSingle();
+  			              		
+  			              		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0));
+  			              		priorNode = indexedNode.getSingle();
   			              		
   			              		//Insert Node properties into nodeMap
   			              		int count = streamReader.getAttributeCount();
@@ -325,7 +334,7 @@ public class OSMRoutingImporter
   			              			//Insert tag element's properties into nodeMap
   			              			priorNode.setProperty(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
   			              		}
-  			              		
+  			              		//System.out.println("reading Node parameters");
   			              	}//end if(idPresent...)
   			             	
   			              	else
@@ -333,30 +342,39 @@ public class OSMRoutingImporter
   			              	
   		   			}//end if
   			        
-  			        
+  				    
+  					//*******************************************************
+  					//Insert tag elements into nodeMap if Node ID is indexed
+  					//*******************************************************
   			        if(streamReader.getLocalName().equals("tag") && nodeNested == true && idPresentTest == true)
   			        {
   							//insert tag element's properties into nodeMap
   			                nodeMap.put(streamReader.getAttributeValue(0).toString(), streamReader.getAttributeValue(1).toString());
-  			                
+  			                //System.out.println("reading Tag element");
   			        }//end if(streamReader.getLocalName() == "tag"
   			        
-  			        if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName() == "node")
-  			        {
-  			        	System.out.println("****************In end Node element if-statment!*******************");
-  			        	for (Map.Entry<String, String> entry : nodeMap.entrySet())
-  						{
-  							priorNode.setProperty(entry.getKey(), entry.getValue()); 
-  							System.out.println("****************Set Tag properties from nodeMap, hopefully!*******************");
-  						}
-			            
-			            //Reset variables and data structures
-  			        	nodeMap.clear(); //Reset Map for next Way element and its properties
-  			        	nodeNested = false; //Reset Nested boolean
-  			        	idPresentTest = false;
-			           
-  			        }//end if streamReader.getEventType() == END.ELEMENT...
-  				}//end if(streamReader.getEventType)
+  				}//end if(streamReader.getEventType is START_ELEMENT)
+  				
+  				
+			    //***************************************************************************
+  				//Check to see if reached closing node tag and if node is indexed in GraphDB
+  				//If so, continue with adding Tag properties from the nodeMap to the graphDB node
+				//***************************************************************************
+  				if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName() == "node" && idPresentTest == true)
+			    {
+			        	
+			        	for (Map.Entry<String, String> entry : nodeMap.entrySet())
+						{
+							priorNode.setProperty(entry.getKey(), entry.getValue()); 
+							//System.out.println("****************Set Tag properties from nodeMap, hopefully!*******************");
+						}
+		            
+			        	//Reset variables and data structures
+			        	nodeMap.clear(); //Reset Map for next Way element and its properties
+			        	nodeNested = false; //Reset Nested boolean
+			        	idPresentTest = false;
+			        
+			    }//end if streamReader.getEventType() == END.ELEMENT...
   			}//end while
   		}//end try
   		
