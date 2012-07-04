@@ -12,6 +12,7 @@ import javax.xml.stream.XMLStreamReader;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
@@ -39,7 +40,7 @@ public class OSMRoutingImporter
 	private Map<String, String> nodeMap = new HashMap<String, String>();
 	private boolean commitToGraph = false;
 	private boolean idPresentTest = false;
-	
+	private String wayID;
 	
 	//Constructor
 	public OSMRoutingImporter (String filePath)
@@ -78,6 +79,7 @@ public class OSMRoutingImporter
             	routingNode.createRelationshipTo(importNode, RelTypes.OSM);
                 importNode.setProperty("name", "filename+filesize+currentdate");
                 
+                
       			while(streamReader.hasNext())
       			{
       				streamReader.next();
@@ -90,6 +92,9 @@ public class OSMRoutingImporter
       					//*******************************************************
       					if(streamReader.getLocalName() == "way")
       					{
+      						//Obtain wayID for connected Node relationships
+      						wayID = streamReader.getAttributeValue(0).toString();
+      						
       						//parse though the way tag's attributes and values
       						int count = streamReader.getAttributeCount();
       						for(int i = 0; i < count; i++)
@@ -177,9 +182,11 @@ public class OSMRoutingImporter
 			               		nd = indexedNode.getSingle();
 			               	}
 			               	
-			               	priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
+  							//Create relationship between nodes and set wayID
+			               	Relationship rel = priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
+			               	rel.setProperty("wayID", wayID);
 			               	priorNode = nd;
-  						}
+  						}//end for(int i = 0...)
   						
   						//RESET ALL VARIABLES AND DATA STRUCTURES
   			        	wayMap.clear(); //Reset Map for next Way element and its properties
