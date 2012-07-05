@@ -32,6 +32,7 @@ public class OSMRoutingImporter
     private Index<Node> wayNameIndex;
     private final String NODE_ID = "node_id";
     private Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
+    protected Node importNode;
 	private boolean wayNested; //used to detect whether or not the streamer is nested within a Way element
 	private boolean nodeNested = false;
 	private int nodeCount = 0; //used to pace committing to graph
@@ -75,7 +76,7 @@ public class OSMRoutingImporter
                     routingNode, RelTypes.OSM );
                 
                 //Create import node and connect to Routing node
-                Node importNode = graphDb.createNode();
+                importNode = graphDb.createNode();
             	routingNode.createRelationshipTo(importNode, RelTypes.OSM);
                 importNode.setProperty("name", "filename+filesize+currentdate");
                 
@@ -284,6 +285,7 @@ public class OSMRoutingImporter
     }//end idPresent()
     
     
+   
     
     /*
     private void testWayIndex()
