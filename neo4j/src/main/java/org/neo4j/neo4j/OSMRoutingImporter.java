@@ -375,7 +375,7 @@ public class OSMRoutingImporter
 			        	for (Map.Entry<String, String> entry : nodeMap.entrySet())
 						{
 							priorNode.setProperty(entry.getKey(), entry.getValue()); 
-							//System.out.println("****************Set Tag properties from nodeMap, hopefully!*******************");
+							System.out.println(entry.getKey() + " " + entry.getValue());
 						}
 		            
 			        	//Reset variables and data structures

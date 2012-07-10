@@ -1,15 +1,17 @@
 package org.neo4j.neo4j;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
+//import org.neo4j.graphdb.traversal.Evaluation;
+//import org.neo4j.graphdb.traversal.Evaluator;
+//import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.kernel.Traversal;
-import org.neo4j.kernel.Uniqueness;
 import org.neo4j.neo4j.OSMRoutingImporter;
 
 
 public class OSMRoutingImporterTEST 
 {
-
+	//public static Evaluator e = new Evaluator();
 	/**
 	 * @param args
 	 */
@@ -23,23 +25,42 @@ public class OSMRoutingImporterTEST
 	
 		importer.importXML(osmXmlFilePath);
 		
-		Node importNode = importer.importNode;
+		//Obtain startnode from imported graph
+		Node startNode = importer.importNode;
 		
-
         //Traverse imported graph and add calculated distance between nodes
       	final TraversalDescription NODE_TRAVERSAL = Traversal.description()
-      		        .depthFirst()
-      		        .uniqueness( Uniqueness.RELATIONSHIP_GLOBAL );
-      		
-      	for ( Path path : NODE_TRAVERSAL.traverse( importNode ) )
+      		        .depthFirst();
+      		        
+      	try
       	{
-      		output += path + "\n";
-      	}
+      		
+      		for ( Path path : NODE_TRAVERSAL.traverse( startNode ) )
+      		{
+      			//evaluate(path);
+      			if(path.length() > 0)
+      				output += path + "\n";
+      		}
        
         
-      	System.out.println(output);
-    
+      		System.out.println(output);
+      	}
+      	
+      	catch(NullPointerException npe)
+      	{
+      		System.out.println("Error");
+      	}
 		
 	}//end main
 
+	/*
+	public static Evaluation evaluate(Path path)
+	{
+		if(path.lastRelationship().getProperty(wayID).equals(wayID))
+			return Evaluation.INCLUDE_AND_CONTINUE;
+		
+		else
+			return Evaluation.EXCLUDE_AND_CONTINUE;
+	}
+	*/
 }//end TEST
