@@ -1,4 +1,5 @@
 package org.neo4j.neo4j;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 //import org.neo4j.graphdb.traversal.Evaluation;
@@ -22,12 +23,13 @@ public class OSMRoutingImporterTEST
 		String output = "";
 		
 		OSMRoutingImporter importer = new OSMRoutingImporter(graphDbPath);
-	
+		
 		importer.importXML(osmXmlFilePath);
-		
+		//GraphDatabaseService graphDb = importer.graphDb;
 		//Obtain startnode from imported graph
-		Node startNode = importer.importNode;
-		
+		//Node startNode = graphDb.getNodeById("importNode");
+		System.out.println( importer.printRoute() );
+		/*
         //Traverse imported graph and add calculated distance between nodes
       	final TraversalDescription NODE_TRAVERSAL = Traversal.description()
       		        .depthFirst();
@@ -50,9 +52,48 @@ public class OSMRoutingImporterTEST
       	{
       		System.out.println("Error");
       	}
-		
+		*/
+	
 	}//end main
 
+	private Node getNode()
+	{
+	     return importer.graphDb.getReferenceNode()
+	             .getSingleRelationship( RelTypes.NEO_NODE, Direction.OUTGOING )
+	             .getEndNode();
+	}
+	
+	
+	public String printRoute()
+	{
+	        Node currentNode = getNode();
+	        // START SNIPPET: friends-usage
+	        int numberOfFriends = 0;
+	        String output = currentNode.getProperty( "nodeID" ) + " node:\n";
+	        Traverser routeTraverser = getFriends( neoNode );
+	        for ( Path friendPath : friendsTraverser )
+	        {
+	            output += "At depth " + friendPath.length() + " => "
+	                      + friendPath.endNode()
+	                              .getProperty( "name" ) + "\n";
+	            numberOfFriends++;
+	        }
+	        output += "Number of friends found: " + numberOfFriends + "\n";
+	        // END SNIPPET: friends-usage
+	        return output;
+	    }
+
+	    // START SNIPPET: get-friends
+	    private static Traverser getFriends(
+	            final Node person )
+	    {
+	        TraversalDescription td = Traversal.description()
+	                .breadthFirst()
+	                .relationships( RelTypes.KNOWS, Direction.OUTGOING )
+	                .evaluator( Evaluators.excludeStartPosition() );
+	        return td.traverse( person );
+	    }
+	
 	/*
 	public static Evaluation evaluate(Path path)
 	{
