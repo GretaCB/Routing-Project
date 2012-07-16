@@ -4,12 +4,14 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -26,7 +28,7 @@ public class OSMRoutingImporter
 {
 	//Neo4j variables
 	private String osmImport_DB;
-	private GraphDatabaseService graphDb;
+	protected GraphDatabaseService graphDb;
 	private String osmXmlFilePath;
     private Index<Node> nodeIdIndex;
     private Index<Node> wayNameIndex;
@@ -197,7 +199,7 @@ public class OSMRoutingImporter
       				}//end if(streamReader.getEventType() == END.ELEMENT...
       				
       				//Commit after every 5000 nodes
-      				if(nodeCount >= 5000 && wayNested == false)
+      				if(nodeCount >= 50000 && wayNested == false)
       				{
             			tx.success();
             			nodeCount = 1;
@@ -230,7 +232,9 @@ public class OSMRoutingImporter
                  tx.finish();
             }
             
-      		
+      		//Traverse graph to add distance between nodes
+      		System.out.println("Traversing graph for distance between nodes...");
+      		traverse();
       		
       		System.out.println( "Shutting down database ..." );
             shutdown();
@@ -301,6 +305,38 @@ public class OSMRoutingImporter
     	}
     }
     */
+    
+    private void traverse()
+    {
+    	Iterable<Relationship> importNodeIterator = importNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_WAY);
+    	String wayID;
+    	while(((Iterator<Relationship>) importNodeIterator).hasNext())
+    	{
+    		Relationship nextRel = ((Iterator<Relationship>) importNodeIterator).next();
+    		Node wayNode = nextRel.getStartNode();
+    		
+    		//Get wayID from wayNode
+    		wayID = (String) wayNode.getProperty("wayID");
+    		
+    		//Get all relationships connected to the next node, then iterate through them to see which matches the wayID.
+    		Iterable<Relationship> nodeNextIterator = nextRel.getEndNode().getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT);
+    		
+    		//Follow every relationship with the same wayID as the wayNode
+    		do
+    		{
+    			//Get the long/lat from the start and end nodes.
+    			
+    			//Then calculate distance and add as a parameter to the relationship between the two nodes
+    			
+    			
+    		}while(((Iterator<Relationship>) nodeNextIterator).next().getProperty("wayID").equals(wayID));
+    		
+    	}
+    	
+    	
+    	
+    	
+    }//end traverse
     
     //Parse through xml file again to gather info from indexed "Node" elements
     private void getNodeInfo() throws FileNotFoundException
