@@ -312,9 +312,18 @@ public class OSMRoutingImporter
     {
     	Iterable<Relationship> importNodeIterator = importNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_WAY);
     	String wayID;
+    	boolean flag;
+		String longitudeStart;
+		String latitudeStart;
+		String longitudeEnd;
+		String latitudeEnd;
+		double distanceInKm; //in kilometers
+		
     	try{
     	while(((Iterator<Relationship>) importNodeIterator).hasNext())
     	{
+    		//Reset flag
+    		flag = true;
     		Relationship firstRel = ((Iterator<Relationship>) importNodeIterator).next();
     		Node wayNode = firstRel.getEndNode();
     		
@@ -325,15 +334,68 @@ public class OSMRoutingImporter
     		//Get all relationships connected to the next node, then iterate through them to see which matches the wayID.
     		Iterable<Relationship> nodeNextIterator = firstRel.getEndNode().getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT);
     		Relationship nextRel = ((Iterator<Relationship>) nodeNextIterator).next();
-    		System.out.println("Relationhip? Node?..." + nextRel.getPropertyKeys());
-    		nodeNextIterator = nextRel.getEndNode().getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT);
-			nextRel = ((Iterator<Relationship>) nodeNextIterator).next();
-			System.out.println("Relationhip? Node?..." + nextRel.getPropertyKeys());
+    		System.out.println("Relationhip..." + nextRel.getPropertyKeys());
+    	
     		
     		//Follow every relationship with the same wayID as the wayNode
     		do
     		{
     			
+    			//Get the long/lat from the start node...then check to see which node will be the end node (matches wayID)
+    			Node startNode = nextRel.getEndNode();
+       			longitudeStart = (String) startNode.getProperty("lon");
+    			latitudeStart = (String) startNode.getProperty("lat");
+    			System.out.println("StartNode..." + startNode.getPropertyKeys());
+    			nodeNextIterator = nextRel.getEndNode().getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT);
+    			
+        		if(((Iterator<Relationship>) nodeNextIterator).next().getProperty("wayID").equals(wayID))
+        		{
+        			
+        			nextRel = ((Iterator<Relationship>) nodeNextIterator).next();
+        			Node endNode = nextRel.getEndNode();
+        			System.out.println("EndNode...: " + endNode.getPropertyKeys());
+        			
+        			longitudeEnd = (String) endNode.getProperty("lon");
+        			latitudeEnd = (String) endNode.getProperty("lat");
+        			
+        			Coordinate referenceStart = new Coordinate (Double.parseDouble(longitudeStart), Double.parseDouble(latitudeStart));
+        			Coordinate referenceEnd = new Coordinate (Double.parseDouble(longitudeEnd), Double.parseDouble(latitudeEnd));
+        			
+        			distanceInKm = OrthodromicDistance.calculateDistance(referenceStart, referenceEnd);
+        			
+        			nextRel.setProperty("distance", distanceInKm);
+        		}
+        		
+        		else if(((Iterator<Relationship>) nodeNextIterator).hasNext() && ((Iterator<Relationship>) nodeNextIterator).next().getProperty("wayID").equals(wayID))
+        		{
+        			nextRel = ((Iterator<Relationship>) nodeNextIterator).next();
+        			
+        			Node endNode = nextRel.getEndNode();
+        			System.out.println("EndNode...: " + endNode.getPropertyKeys());
+        			
+        			longitudeEnd = (String) endNode.getProperty("lon");
+        			latitudeEnd = (String) endNode.getProperty("lat");
+        			
+        			Coordinate referenceStart = new Coordinate (Double.parseDouble(longitudeStart), Double.parseDouble(latitudeStart));
+        			Coordinate referenceEnd = new Coordinate (Double.parseDouble(longitudeEnd), Double.parseDouble(latitudeEnd));
+        			
+        			distanceInKm = OrthodromicDistance.calculateDistance(referenceStart, referenceEnd);
+        			
+        			nextRel.setProperty("distance", distanceInKm);
+        		}
+  
+    			
+    			else
+    				flag = false;
+    			
+    			
+    		}while(flag);
+    		
+    		/*do
+    		{
+    			nodeNextIterator = nextRel.getEndNode().getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT);
+    			nextRel = ((Iterator<Relationship>) nodeNextIterator).next();
+    			System.out.println("Relationhip? Node?..." + nextRel.getPropertyKeys());
     			System.out.println("Relationship after wayNode: " + nextRel.getPropertyKeys());
     			String longitudeStart;
     			String latitudeStart;
@@ -361,12 +423,10 @@ public class OSMRoutingImporter
     			
     			nextRel.setProperty("distance", distanceInKm);
     			
-    			nodeNextIterator = nextRel.getEndNode().getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT);
-    			nextRel = ((Iterator<Relationship>) nodeNextIterator).next();
-    			System.out.println("right before while check..." + nextRel.getPropertyKeys());
+    			
     			
     		}while(((Iterator<Relationship>) nodeNextIterator).hasNext() && ((Iterator<Relationship>) nodeNextIterator).next().getProperty("wayID").equals(wayID));
-    		
+    		*/
     	}//end while(((Iterator<Relationship>) importNodeIterator).hasNext())
     	}//end try
     	
