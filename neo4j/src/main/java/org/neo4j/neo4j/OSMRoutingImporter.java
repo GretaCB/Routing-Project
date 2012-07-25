@@ -1,5 +1,6 @@
 package org.neo4j.neo4j;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
@@ -32,18 +33,11 @@ public class OSMRoutingImporter
 	protected GraphDatabaseService graphDb;
 	private String osmXmlFilePath;
     private Index<Node> nodeIdIndex;
+    private Index<Node> wayIdIndex;
     private Index<Node> wayNameIndex;
     private final String NODE_ID = "node_id";
-    private Node priorNode; //used to keep track of former connecting node in the sequence of nodes within a Way
     protected Node importNode;
-	private boolean wayNested; //used to detect whether or not the streamer is nested within a Way element
-	private boolean nodeNested = false;
 	private int nodeCount = 0; //used to pace committing to graph
-	private ArrayList<String> nodeList = new ArrayList<String>();
-	private Map<String, String> wayMap = new HashMap<String, String>();
-	private Map<String, String> nodeMap = new HashMap<String, String>();
-	private boolean commitToGraph = false;
-	private boolean idPresentTest = false;
 	private String wayID;
 	
 	//Constructor
@@ -53,13 +47,14 @@ public class OSMRoutingImporter
 	}
 	
 	
-	public void importXML(String filePath) throws FileNotFoundException
+	public void importXML(String filePath) throws FileNotFoundException, XMLStreamException
     {
     	osmXmlFilePath = filePath;
     
     	// START SNIPPET: startDb
         graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( osmImport_DB );
         nodeIdIndex = graphDb.index().forNodes( "nodeIds" ); 
+        wayIdIndex = graphDb.index().forNodes( "wayIds" );
         wayNameIndex = graphDb.index().forNodes( "wayNames" );
         registerShutdownHook();
         XMLInputFactory factory = XMLInputFactory.newInstance();
@@ -69,7 +64,7 @@ public class OSMRoutingImporter
       		
       		try 
       		{
-      			
+      			File osmXmlFile = new File(osmXmlFilePath);
       			XMLStreamReader streamReader = factory.createXMLStreamReader(
       				    new FileReader(osmXmlFilePath));
       			
@@ -81,51 +76,49 @@ public class OSMRoutingImporter
                 //Create import node and connect to Routing node
                 importNode = graphDb.createNode();
             	routingNode.createRelationshipTo(importNode, RelTypes.OSM);
-                importNode.setProperty("name", "filename+filesize+currentdate");
+                importNode.setProperty("name", System.currentTimeMillis() + " " + osmXmlFile.getName());
                 
-                
-      			while(streamReader.hasNext())
+            	ArrayList<String> nodeList = new ArrayList<String>();
+            	Map<String, String> wayMap = new HashMap<String, String>();
+            	boolean commitToGraph = false;
+            	boolean wayNested = false; //used to detect whether or not the streamer is nested within a Way element
+      			
+            	while(streamReader.hasNext())
       			{
       				streamReader.next();
       				
       				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
       				{
-      					
-      					//*******************************************************
-      					//Insert Way element's properties into wayMap
-      					//*******************************************************
-      					if(streamReader.getLocalName() == "way")
+      					if(streamReader.getLocalName().equals("way"))
       					{
+      						wayMap.clear();
+      						nodeList.clear();
+      						commitToGraph = false;
+      						
+      						//Insert Way element's properties into wayMap
+      						
       						//Obtain wayID for connected Node relationships
-      						wayID = streamReader.getAttributeValue(0).toString();
+      						wayID = streamReader.getAttributeValue(0);
       						
       						//parse though the way tag's attributes and values
       						int count = streamReader.getAttributeCount();
       						for(int i = 0; i < count; i++)
       						{    
       							//insert Way element's properties into wayMap
-      			                wayMap.put(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i).toString());
-      			               
+      			                wayMap.put(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i));      			               
       						}
+      						
       						wayNested = true;
-      					}
-      					
-      					
-      					//*******************************************************
-      					//Insert nodeID into ArrayList if nested within a Way tag
-      					//*******************************************************
-      			        if(streamReader.getLocalName() == "nd" && wayNested == true)
+      					} 
+      					else if(streamReader.getLocalName().equals("nd") && wayNested) 
+      					{
+      						//Insert nodeID into ArrayList if nested within a Way tag      			        	
+      						nodeList.add(streamReader.getAttributeValue(0));      			      
+      			        } 
+      					else if(streamReader.getLocalName().equals("tag") && wayNested)
       			        {
-      			        	nodeList.add(streamReader.getAttributeValue(0)); //Insert nodeID into ArrayList
-      			        
-      			        }//end if(getLocalName() == "nd"
-      			        
-      				     
-      			        //*******************************************************
-      					//Insert tag elements into wayMap if relevant to routing
-      					//*******************************************************
-      			        if(streamReader.getLocalName()== "tag" && wayNested == true)
-      			        {
+      			        	//Insert tag elements into wayMap if relevant to routing
+      			        	
       			        	//parse though tag attributes and values and check if way element is relevant to routing
       						int count = streamReader.getAttributeCount();
       						for(int i = 0; i < count; i++)
@@ -134,81 +127,57 @@ public class OSMRoutingImporter
       			                wayMap.put(streamReader.getAttributeValue(0).toString(), streamReader.getAttributeValue(1).toString());
       			                
       			                //check to see if relevant to routing
-      			                if(streamReader.getAttributeValue(i).toString().equals("highway"))
+      			                if(streamReader.getAttributeValue(i).toString().equals("highway")) {
       			                	commitToGraph = true;
-      			                
-      			                
-      						}//end for(int i...)
-      			        }//if(streamReader.getLocalName()== "tag"...
-      				}//end if(streamReader.getEventType)
+      			                }      			                     			                
+      						}
+      			        }
+      				} else if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName().equals("way")) {
+      					if (commitToGraph) {
+	  						Node wayNode = graphDb.createNode();
+	  						
+	  						wayIdIndex.add(wayNode, "way_id", wayID);
+	  						
+	  						nodeCount++;
+	  						//connect new way node with its property/attributes to the import node
+	  						importNode.createRelationshipTo(wayNode, RelTypes.OSM_WAY);
+	      					Node priorNode = wayNode;
+	  						
+	  						//parse through Map and set wayNodes's properties based on the contents of the Map
+	  						for (Map.Entry<String, String> entry : wayMap.entrySet())
+	  						{
+	  							wayNode.setProperty(entry.getKey(), entry.getValue()); 
+	  							
+	  							//Add wayNode's highway name to the wayName index
+	  							if(entry.getKey().equals("name"))
+	  								wayNameIndex.add(wayNode, "name", entry.getValue());
+	  						}
+	  						
+	  						int count = nodeList.size();
+	  						for(int i = 0; i < count; i++)
+	  						{
+	  							Node nd = getOsmNode(nodeList.get(i));	  							
+	  							if(nd == null)
+	  								nd = createAndIndexNode(nodeList.get(i));
+				               	
+	  							//Create relationship between nodes and set wayID
+				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_NODENEXT);
+				               	rel.setProperty("wayID", wayID);
+				               	priorNode = nd;
+	  						}//end for(int i = 0...)
+      					}
+      					
+  						wayNested = false; //Reset Nested boolean
+  			        }
       				
-      				
-      		
-      			    //*****************************************************************
-      				//Check to see if reached closing way tag
-      				//If so, continue with creating Nodes to graph, if way is relevant to routing
-  					//*****************************************************************
-      				if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName() == "way" && commitToGraph == true)
-      				{
-      					System.out.println("In way END_ELEMENT block");
-  						Node wayNode = graphDb.createNode();
-  						nodeCount++;
-  						//connect new way node with its property/attributes to the import node
-  						importNode.createRelationshipTo(wayNode, RelTypes.OSM_WAY);
-      					priorNode = wayNode;
-  						
-  						//parse through Map and set wayNodes's properties based on the contents of the Map
-  						for (Map.Entry<String, String> entry : wayMap.entrySet())
-  						{
-  							wayNode.setProperty(entry.getKey(), entry.getValue()); 
-  							System.out.println(entry.getKey() + " " + entry.getValue());
-  							
-  							//Add wayNode's highway name to the wayName index
-  							if(entry.getKey() == "name")
-  								wayNameIndex.add(wayNode, "name", entry.getValue());
-  							
-  						}
-  						
-  						int count = nodeList.size();
-  						for(int i = 0; i < count; i++)
-  						{
-  							Node nd;
-  							
-  							if(!idPresent(nodeList.get(i).toString()))
-  								nd = createAndIndexNode(nodeList.get(i));
-  			              	
-			              	    
-			               	
-			               	//Assign the address of the indexed node to this local node ("nd")
-			               	else
-			               	{
-			               		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, nodeList.get(i));
-			               		nd = indexedNode.getSingle();
-			               	}
-			               	
-  							//Create relationship between nodes and set wayID
-			               	Relationship rel = priorNode.createRelationshipTo( nd, RelTypes.OSM_NODENEXT);
-			               	rel.setProperty("wayID", wayID);
-			               	priorNode = nd;
-  						}//end for(int i = 0...)
-  						
-  						//RESET ALL VARIABLES AND DATA STRUCTURES
-  			        	wayMap.clear(); //Reset Map for next Way element and its properties
-  			        	nodeList.clear(); //Reset ArrayList for nodes in the next Way element
-  			        	wayNested = false; //Reset Nested boolean
-  			        	commitToGraph = false;
-      				}//end if(streamReader.getEventType() == END.ELEMENT...
-      				
-      				//Commit after every 5000 nodes
-      				if(nodeCount >= 50000 && wayNested == false)
+      				if(nodeCount == 50000)
       				{
             			tx.success();
             			tx.finish();
             			tx = graphDb.beginTx();
             			
-            			nodeCount = 1;
+            			nodeCount = 0;
       				}
-      				
       			}//end while streamReader.hasNext()
       			
       			//Parse through graphDb again to add Node Info to indexed nodes
@@ -223,21 +192,12 @@ public class OSMRoutingImporter
       			//Commit the remaining nodes, if nodeCount < 5000
       			tx.success();
       		
-      		}//end try
-      		
-      		
-      		catch (XMLStreamException e) 
-      		{
-      		    e.printStackTrace();
-      		}
-      		
+      		}      		
       		finally
             {
                  tx.finish();
             }
             
-      		
-      		
       		System.out.println( "Shutting down database ..." );
             shutdown();
       		
@@ -278,36 +238,12 @@ public class OSMRoutingImporter
     }//end createAndIndexNode()
 
 
-    protected boolean idPresent(String id)
+    protected Node getOsmNode(String id)
     {
     	IndexHits<Node> checkForID = nodeIdIndex.get( NODE_ID, id );
-    	Node test = checkForID.getSingle();
-    	if(test == null)
-    		return false;
-    	
-    	else 
-    		return true;
-    	
-    }//end idPresent()
-    
-    
-   
-    
-    /*
-    private void testWayIndex()
-    {
-    	IndexHits<Node> hits = wayNameIndex.query("name", "*");
-    	Node testNode;
-    	int count = hits.size();
-    	for(int i = -1; i < count; i++)
-    	{
-    		testNode = hits.next();
-    		testNode.getPropertyKeys();
-    		System.out.println();
-    	}
+    	return checkForID.getSingle();
     }
-    */
-
+    
     private Coordinate getCoordinate(Node node) {
 		if (node.hasProperty("lon") && node.hasProperty("lat")) {
 			Double lon = (Double) node.getProperty("lon");
@@ -335,7 +271,7 @@ public class OSMRoutingImporter
 			foundSomeWayNode = false;			
 			while (!foundSomeWayNode && nodesRelationships.hasNext()) {				
 				Relationship nodeRel = nodesRelationships.next();
-				if (!nodeRel.hasProperty("distance") && 
+				if (!nodeRel.hasProperty("distance_in_meters") && 
 					nodeRel.hasProperty("wayID") && 
 					wayId.equals(nodeRel.getProperty("wayID"))) 
 				{
@@ -362,14 +298,11 @@ public class OSMRoutingImporter
     }
     	
     //Parse through xml file again to gather info from indexed "Node" elements
-    private void getNodeInfo() throws FileNotFoundException
+    private void getNodeInfo() throws FileNotFoundException, XMLStreamException
     {
     	XMLInputFactory factory = XMLInputFactory.newInstance();
+    	Node osmNode = null;
     	
-    	
-		 try 
-   		 {
-   			
    			XMLStreamReader streamReader = factory.createXMLStreamReader(
    				    new FileReader(osmXmlFilePath));
    			while(streamReader.hasNext())
@@ -378,85 +311,41 @@ public class OSMRoutingImporter
   				
   				if(streamReader.getEventType() == XMLStreamReader.START_ELEMENT)
   				{
-  				
   					//*******************************************************
   					//Insert Node Element's properties into graphDB node
   					//*******************************************************
-  					if(streamReader.getLocalName() == "node")
+  					if(streamReader.getLocalName().equals("node"))
   		   			{
-  				        	nodeNested = true;
-  				        	
-  							//Check whether or not the specific node was indexed within the graphDb (is in a Way)
-  							//Copy over its info to the indexed node
-  			              	if(idPresent(streamReader.getAttributeValue(0).toString()))
-  			              	{
-  			              		idPresentTest = true;
-  			              		
-  			              		IndexHits<Node> indexedNode = nodeIdIndex.get( NODE_ID, streamReader.getAttributeValue(0));
-  			              		priorNode = indexedNode.getSingle();
-  			              		
-  			              		//Insert Node properties into nodeMap
-  			              		int count = streamReader.getAttributeCount();
-  			              		for(int i = 0; i < count; i++)
-  			              		{    
-  			              			//Insert tag element's properties into nodeMap
-  			              			String k = streamReader.getAttributeName(i).toString();
-  			              			if ("lat".equals(k) || "lon".equals(k)) {
-  			              				Double value = Double.parseDouble(streamReader.getAttributeValue(i));
-  			              				priorNode.setProperty(k, value);
-  			              			} else {
-  			              				priorNode.setProperty(k, streamReader.getAttributeValue(i));
-  			              			}
+  				        osmNode = getOsmNode(streamReader.getAttributeValue(0));  				        	
+  						if(osmNode != null)
+  			            {
+  			              	//Insert Node properties into nodeMap
+  			              	int count = streamReader.getAttributeCount();
+  			              	for(int i = 0; i < count; i++)
+  			              	{    
+  			              		//Insert tag element's properties into nodeMap
+  			              		String k = streamReader.getAttributeName(i).toString();
+  			              		if ("lat".equals(k) || "lon".equals(k)) {
+  			              			Double value = Double.parseDouble(streamReader.getAttributeValue(i));
+  			              			osmNode.setProperty(k, value);
+  			              		} else {
+  			              			osmNode.setProperty(k, streamReader.getAttributeValue(i));
   			              		}
-  			              		//System.out.println("reading Node parameters");
-  			              	}//end if(idPresent...)
-  			             	
-  			              	else
-  			              		idPresentTest = false;
-  			              	
-  		   			}//end if
-  			        
-  				    
-  					//*******************************************************
-  					//Insert tag elements into nodeMap if Node ID is indexed
-  					//*******************************************************
-  			        if(streamReader.getLocalName().equals("tag") && nodeNested == true && idPresentTest == true)
+  			              	}
+  			            }      	
+  		   			} 
+  					else if(streamReader.getLocalName().equals("tag") && osmNode != null)
   			        {
   							//insert tag element's properties into nodeMap
-  			                nodeMap.put(streamReader.getAttributeValue(0).toString(), streamReader.getAttributeValue(1).toString());
-  			                //System.out.println("reading Tag element");
-  			        }//end if(streamReader.getLocalName() == "tag"
-  			        
-  				}//end if(streamReader.getEventType is START_ELEMENT)
-  				
-  				
-			    //***************************************************************************
-  				//Check to see if reached closing node tag and if node is indexed in GraphDB
-  				//If so, continue with adding Tag properties from the nodeMap to the graphDB node
-				//***************************************************************************
-  				if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName() == "node" && idPresentTest == true)
+  			                osmNode.setProperty(streamReader.getAttributeValue(0), streamReader.getAttributeValue(1));
+  			        }  			        
+  				} 
+  				else if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName().equals("node"))
 			    {
-			        	
-			        	for (Map.Entry<String, String> entry : nodeMap.entrySet())
-						{
-							priorNode.setProperty(entry.getKey(), entry.getValue()); 
-							// System.out.println(entry.getKey() + " " + entry.getValue());
-						}
-		            
-			        	//Reset variables and data structures
-			        	nodeMap.clear(); //Reset Map for next Way element and its properties
-			        	nodeNested = false; //Reset Nested boolean
-			        	idPresentTest = false;
-			        
+  					osmNode = null;
 			    }//end if streamReader.getEventType() == END.ELEMENT...
   			}//end while
-  		}//end try
   		
-  		catch (XMLStreamException e) 
-  		{
-  		    e.printStackTrace();
-  		}
-    	
     	
     }//end getNodeInfo
 }//end OSMImporterNew
