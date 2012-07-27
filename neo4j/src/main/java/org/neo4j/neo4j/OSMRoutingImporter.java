@@ -25,6 +25,7 @@ import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.kernel.Traversal;
 import org.neo4j.neo4j.OsmRoutingRelationships.RelTypes;
+import org.neo4j.graphalgo.CommonEvaluators;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 
@@ -198,7 +199,7 @@ public class OSMRoutingImporter
       			//Commit the remaining nodes, if nodeCount < 50000
       			tx.success();
       			
-      			createRoute();
+      			//createRoute();
       			
       		}      		
       		finally
@@ -308,8 +309,9 @@ public class OSMRoutingImporter
     
     public void createRoute()
 	{
+
     	PathFinder<Path> finder = GraphAlgoFactory.aStar(
-                Traversal.expanderForTypes( RelTypes.OSM_NODENEXT, Direction.BOTH) , maxDepth ); //max depth??
+                Traversal.expanderForTypes( RelTypes.OSM_NODENEXT, Direction.BOTH) , CommonEvaluators.doubleCostEvaluator("distance_in_meters"), EstimateEvaluator );
     	String startNodeID;
 		String endNodeID;
 		Path route;
@@ -323,7 +325,7 @@ public class OSMRoutingImporter
 	  	Node end = graphDb.getNodeById(endNode);
 	  	route = finder.findSinglePath(start, end); 
 	  	
-	  	//CommonEvaluators.doubleCostEvaluator(String distance_in_meters);
+	  	
 	  	  
 	}//end createRoute()
 	
