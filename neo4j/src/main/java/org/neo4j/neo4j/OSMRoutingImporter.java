@@ -8,13 +8,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import javax.swing.JOptionPane;
+//import javax.swing.JFrame;
+//import javax.swing.JOptionPane;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
 import org.neo4j.gis.spatial.pipes.processing.OrthodromicDistance;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Expander;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
@@ -26,8 +28,11 @@ import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.kernel.Traversal;
 import org.neo4j.neo4j.OsmRoutingRelationships.RelTypes;
 import org.neo4j.graphalgo.CommonEvaluators;
+import org.neo4j.graphalgo.CostEvaluator;
+import org.neo4j.graphalgo.EstimateEvaluator;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
+import org.neo4j.graphalgo.WeightedPath;
 
 import com.vividsolutions.jts.geom.Coordinate;
 
@@ -207,6 +212,8 @@ public class OSMRoutingImporter
                  tx.finish();
             }
             
+      		createRoute();
+      		
       		System.out.println( "Shutting down database ..." );
             shutdown();
       		
@@ -309,23 +316,56 @@ public class OSMRoutingImporter
     
     public void createRoute()
 	{
-
-    	PathFinder<Path> finder = GraphAlgoFactory.aStar(
-                Traversal.expanderForTypes( RelTypes.OSM_NODENEXT, Direction.BOTH) , CommonEvaluators.doubleCostEvaluator("distance_in_meters"), EstimateEvaluator );
+    	//Not sure when I need to start a new transaction...and I'm assuming this is the reason I'm getting a NotFoundException
+    	Transaction tx = graphDb.beginTx();
+    	
+    	try{
+    	System.out.println("In creatRoute method...");
+    	EstimateEvaluator<Double> estimateEval = CommonEvaluators.geoEstimateEvaluator(
+    	            "lat", "lon" );
+    	System.out.println("After EstimateEvaluator");
+    	
+    	Expander relExpander = Traversal.expanderForTypes(
+                RelTypes.OSM_NODENEXT, Direction.BOTH );
+    	relExpander.add( RelTypes.OSM_NODENEXT, Direction.BOTH );
+    	System.out.println("After relationship expander");
+    	
+    	CostEvaluator<Double> costEval = CommonEvaluators.doubleCostEvaluator("distance_in_meters");
+    	System.out.println("After Cost Evaluator");
+    	
+    	PathFinder<WeightedPath> finder = GraphAlgoFactory.aStar(
+               relExpander , costEval, estimateEval );
+    	System.out.println("After PathFinder");
+    	
     	String startNodeID;
 		String endNodeID;
-		Path route;
-		startNodeID = JOptionPane.showInputDialog("Enter nodeID for the Start Node: ");
-		endNodeID = JOptionPane.showInputDialog("Enter nodeID for the End Node: ");
-	  	
+		/*
+		JFrame frame = new JFrame("Nodes to Route:");
+		startNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the Start Node: ");
+		endNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the End Node: ");
+	  	*/
+		
+		startNodeID = "278451834";
+		endNodeID = "268222979";
 		long startNode = Long.valueOf(startNodeID);
 	  	long endNode = Long.valueOf(endNodeID);
-		
+		System.out.println(startNode);
+		System.out.println(endNode);
 	  	Node start = graphDb.getNodeById(startNode);
 	  	Node end = graphDb.getNodeById(endNode);
-	  	route = finder.findSinglePath(start, end); 
+	  	Path route = finder.findSinglePath(start, end); 
 	  	
+	  	for ( Node node : route.nodes() )
+        {
+	  		System.out.println( node.getProperty( "id" ) );
+        }
 	  	
+    	}//end try
+    	
+    	finally
+        {
+    		tx.finish();
+        }
 	  	  
 	}//end createRoute()
 	
