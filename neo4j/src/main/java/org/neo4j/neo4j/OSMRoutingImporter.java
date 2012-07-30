@@ -337,23 +337,23 @@ public class OSMRoutingImporter
                relExpander , costEval, estimateEval );
     	System.out.println("After PathFinder");
     	
-    	String startNodeID;
-		String endNodeID;
+    	//String startNodeID = "278451834";
+		//String endNodeID = "268222979";
 		/*
 		JFrame frame = new JFrame("Nodes to Route:");
 		startNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the Start Node: ");
 		endNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the End Node: ");
 	  	*/
 		
-		startNodeID = "278451834";
-		endNodeID = "268222979";
-		long startNode = Long.valueOf(startNodeID);
-	  	long endNode = Long.valueOf(endNodeID);
-		System.out.println(startNode);
-		System.out.println(endNode);
-	  	Node start = graphDb.getNodeById(startNode);
-	  	Node end = graphDb.getNodeById(endNode);
-	  	Path route = finder.findSinglePath(start, end); 
+		Node startNode = getOsmNode("278451834");
+		Node endNode = getOsmNode("268222979");
+		//long startNodeid = Long.parseLong(startNodeID);
+	  	//long endNodeid = Long.parseLong(endNodeID);
+		System.out.println(startNode.getProperty("id")); 
+		System.out.println(endNode.getProperty("id"));
+	  	//Node start = graphDb.getNodeById(startNode);
+	  	//Node end = graphDb.getNodeById(endNode);
+	  	Path route = finder.findSinglePath(startNode, endNode); 
 	  	
 	  	for ( Node node : route.nodes() )
         {
