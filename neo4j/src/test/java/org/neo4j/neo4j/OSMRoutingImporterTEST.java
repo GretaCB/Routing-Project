@@ -7,6 +7,9 @@ package org.neo4j.neo4j;
 //import org.neo4j.graphdb.traversal.Evaluators;
 //import org.neo4j.graphdb.traversal.TraversalDescription;
 //import org.neo4j.kernel.Traversal;
+
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.neo4j.OSMRoutingImporter;
 
 
@@ -16,43 +19,48 @@ public class OSMRoutingImporterTEST
 	/**
 	 * @param args
 	 */
+	public static String graphDbPath = "target/osmImport-db";
+	public static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
+
+	public static GraphDatabaseService graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( graphDbPath );
+	
 	public static void main(String[] args) throws Exception 
 	{
-		String graphDbPath = "target/osmImport-db";
-		String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
-		//String output = "";
-
-		OSMRoutingImporter importer = new OSMRoutingImporter(graphDbPath);
+		registerShutdownHook();
+		OSMRoutingImporter importer = new OSMRoutingImporter(graphDb);
 
 		importer.importXML(osmXmlFilePath);
-
-	
-      	/*        
-      	try
-      	{
-      		//Obtain startnode from imported graph
-    		//Node startNode = importer.importNode;
-      		Node startNode = importer.graphDb.getReferenceNode();
-        
-      		System.out.println(output);
-      	}
-      	
-      	catch(NullPointerException npe)
-      	{
-      		System.out.println("Error");
-      	}
-		*/
+		
+		OSMRouting router = new OSMRouting (graphDb);
+		
+		System.out.println("Creating route...");
+		router.createRoute();
+		
+		System.out.println( "Shutting down database ..." );
+        shutdown();
 		
 	}//end main
 
-	/*
-	public static Evaluation evaluate(Path path)
-	{
-		if(path.lastRelationship().getProperty(wayID).equals(wayID))
-			return Evaluation.INCLUDE_AND_CONTINUE;
-		
-		else
-			return Evaluation.EXCLUDE_AND_CONTINUE;
-	}
-	*/
+	
+	  private static void shutdown()
+	  {
+	      graphDb.shutdown();
+	  }
+	
+	  
+		private static void registerShutdownHook()
+		{
+		        // Registers a shutdown hook for the Neo4j and index service instances
+		        // so that it shuts down nicely when the VM exits (even if you
+		        // "Ctrl-C" the running example before it's completed)
+		      Runtime.getRuntime().addShutdownHook( new Thread()
+		      {
+		          @Override
+		          public void run()
+		          {
+		              shutdown();
+		          }
+		       } );
+		}//end registerShutdownHook()
+	  
 }//end TEST
