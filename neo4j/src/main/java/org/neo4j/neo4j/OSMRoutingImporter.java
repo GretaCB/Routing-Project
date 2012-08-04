@@ -170,22 +170,22 @@ public class OSMRoutingImporter
 	  							Node nd = getOsmNode(nodeList.get(i));	  							
 	  							if(nd == null)
 	  								nd = createAndIndexNode(nodeList.get(i));
-				               	/* Tried this in order to correct the routing error...but I think I need to 
-				               	 * simply set distance to zero for rel between way node and first node 
+				               	//Tried this in order to correct the routing error...but I think I need to 
+				               	//simply set distance to zero for rel between way node and first node 
 	  							if(priorNode == wayNode){
 	  						    	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_FIRSTNODE);
 					               	rel.setProperty("wayID", wayID);
+					               	//rel.setProperty("distance_in_meters", 0);
 					               	priorNode = nd;
 	  							}
 	  							
 	  							else{
-	  							*/
 	  							//Create relationship between nodes and set wayID
 				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_NODENEXT);
 				               	rel.setProperty("wayID", wayID);
 				               	//rel.setProperty("distance_in_meters", 0);
 				               	priorNode = nd;
-	  							
+	  							}
 	  						}//end for(int i = 0...)
       					}
       					
@@ -255,8 +255,8 @@ public class OSMRoutingImporter
 		}
     }
     
-    private void setDistanceBetweenNodes(Node wayNode, Relationship rel, Node otherWayNode) {
-		Coordinate first = getCoordinate(wayNode);
+    private void setDistanceBetweenNodes(Node firstNode, Relationship rel, Node otherWayNode) {
+		Coordinate first = getCoordinate(firstNode);
 		Coordinate second = getCoordinate(otherWayNode);
 		
 		if (first != null && second != null) {
@@ -267,12 +267,12 @@ public class OSMRoutingImporter
 			rel.setProperty("distance_in_meters", 0);
     }
     
-    private void traverseWayToCalculateDistance(Node wayNode, String wayId) {
+    private void traverseWayToCalculateDistance(Node firstNode, String wayId) {
     	System.out.println("Calculating distances in Way: " + wayId);
     	
     	boolean foundSomeWayNode = true;
     	while (foundSomeWayNode) {
-			Iterator<Relationship> nodesRelationships = wayNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT).iterator();
+			Iterator<Relationship> nodesRelationships = firstNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT).iterator();
 			foundSomeWayNode = false;			
 			while (!foundSomeWayNode && nodesRelationships.hasNext()) {				
 				Relationship nodeRel = nodesRelationships.next();
@@ -280,9 +280,9 @@ public class OSMRoutingImporter
 					nodeRel.hasProperty("wayID") && 
 					wayId.equals(nodeRel.getProperty("wayID"))) 
 				{
-					Node otherWayNode = nodeRel.getOtherNode(wayNode);
-					setDistanceBetweenNodes(wayNode, nodeRel, otherWayNode);
-					wayNode = otherWayNode;
+					Node otherWayNode = nodeRel.getOtherNode(firstNode);
+					setDistanceBetweenNodes(firstNode, nodeRel, otherWayNode);
+					firstNode = otherWayNode;
 					foundSomeWayNode = true;
 				}
 			}
@@ -292,9 +292,12 @@ public class OSMRoutingImporter
     private void traverseToCalculateDistances(Transaction tx) {
     	Iterable<Relationship> waysRelationships = importNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_WAY);
     	for (Relationship wayRel : waysRelationships) {
+    		//Node firstNode = Relationship??...getEndNode();
     		Node way = wayRel.getOtherNode(importNode);
+    		Relationship rel = way.getSingleRelationship(RelTypes.OSM_FIRSTNODE, Direction.OUTGOING);
+    		Node firstNode = rel.getEndNode();
     		String wayId = (String) way.getProperty("id");
-    		traverseWayToCalculateDistance(way, wayId);    			
+    		traverseWayToCalculateDistance(firstNode, wayId);    			
     		
     		tx.success();
     		tx.finish();
