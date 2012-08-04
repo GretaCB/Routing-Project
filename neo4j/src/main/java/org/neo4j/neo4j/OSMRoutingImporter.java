@@ -170,11 +170,22 @@ public class OSMRoutingImporter
 	  							Node nd = getOsmNode(nodeList.get(i));	  							
 	  							if(nd == null)
 	  								nd = createAndIndexNode(nodeList.get(i));
-				               	
+				               	/* Tried this in order to correct the routing error...but I think I need to 
+				               	 * simply set distance to zero for rel between way node and first node 
+	  							if(priorNode == wayNode){
+	  						    	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_FIRSTNODE);
+					               	rel.setProperty("wayID", wayID);
+					               	priorNode = nd;
+	  							}
+	  							
+	  							else{
+	  							*/
 	  							//Create relationship between nodes and set wayID
 				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_NODENEXT);
 				               	rel.setProperty("wayID", wayID);
+				               	//rel.setProperty("distance_in_meters", 0);
 				               	priorNode = nd;
+	  							
 	  						}//end for(int i = 0...)
       					}
       					
@@ -210,20 +221,12 @@ public class OSMRoutingImporter
             {
                  tx.finish();
             }
-            
- 
-      		
-      		
+            		
       		
     }//end importXML
 	
 
-	
 
-	
-
-	
-  
 	
     //index "nd" elements and their node id
     protected Node createAndIndexNode( final String id )
@@ -255,9 +258,13 @@ public class OSMRoutingImporter
     private void setDistanceBetweenNodes(Node wayNode, Relationship rel, Node otherWayNode) {
 		Coordinate first = getCoordinate(wayNode);
 		Coordinate second = getCoordinate(otherWayNode);
+		
 		if (first != null && second != null) {
 			rel.setProperty("distance_in_meters", OrthodromicDistance.calculateDistance(first, second) * 1000);
 		}
+		
+		else if(first == null)
+			rel.setProperty("distance_in_meters", 0);
     }
     
     private void traverseWayToCalculateDistance(Node wayNode, String wayId) {

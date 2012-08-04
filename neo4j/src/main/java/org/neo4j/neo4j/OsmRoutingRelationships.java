@@ -9,7 +9,8 @@ public class OsmRoutingRelationships
 	{
 	        OSM,
 			OSM_WAY,
-	        OSM_NODENEXT
+	        OSM_NODENEXT,
+	        OSM_FIRSTNODE
 	}
 	
 }//end OsmRoutingRelationships class

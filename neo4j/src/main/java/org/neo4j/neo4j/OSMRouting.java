@@ -32,7 +32,7 @@ public class OSMRouting{
 	    	Transaction tx = graphDb.beginTx();
 	    	
 	    	try{
-	    	System.out.println("In creatRoute method...");
+	    	System.out.println("In createRoute method...");
 	    	EstimateEvaluator<Double> estimateEval = CommonEvaluators.geoEstimateEvaluator(
 	    	            "lat", "lon" );
 	    	System.out.println("After EstimateEvaluator");
