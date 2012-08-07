@@ -256,9 +256,11 @@ public class OSMRoutingImporter
 		Coordinate first = getCoordinate(firstNode);
 		Coordinate second = getCoordinate(otherWayNode);
 		Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000;
+		Double speedKMperSec = speedLimit / 3.6; //1 meter per second = 3.6 km per hour...this will convert the speed into meters
 		if (first != null && second != null) {
 			rel.setProperty("distance_in_meters", distance);
-			rel.setProperty("cost", distance / speedLimit);
+			//cost is the number of seconds to travel the distance in an hour traveling the max speed
+			rel.setProperty("cost", distance / speedKMperSec); 
 		}
 		
 		/*
