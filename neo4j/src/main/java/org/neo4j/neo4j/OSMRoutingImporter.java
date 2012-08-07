@@ -44,7 +44,7 @@ public class OSMRoutingImporter
 	protected GraphDatabaseService graphDb;
 	private String osmXmlFilePath;
     private static Index<Node> nodeIdIndex;
-    private Index<Node> wayIdIndex;
+    private static Index<Node> wayIdIndex;
     private Index<Node> wayNameIndex;
     private final static String NODE_ID = "node_id";
     protected Node importNode;
@@ -170,12 +170,9 @@ public class OSMRoutingImporter
 	  							Node nd = getOsmNode(nodeList.get(i));	  							
 	  							if(nd == null)
 	  								nd = createAndIndexNode(nodeList.get(i));
-				               	//Tried this in order to correct the routing error...but I think I need to 
-				               	//simply set distance to zero for rel between way node and first node 
 	  							if(priorNode == wayNode){
 	  						    	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_FIRSTNODE);
 					               	rel.setProperty("wayID", wayID);
-					               	//rel.setProperty("distance_in_meters", 0);
 					               	priorNode = nd;
 	  							}
 	  							
@@ -183,7 +180,6 @@ public class OSMRoutingImporter
 	  							//Create relationship between nodes and set wayID
 				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_NODENEXT);
 				               	rel.setProperty("wayID", wayID);
-				               	//rel.setProperty("distance_in_meters", 0);
 				               	priorNode = nd;
 	  							}
 	  						}//end for(int i = 0...)
@@ -245,6 +241,7 @@ public class OSMRoutingImporter
     	return checkForID.getSingle();
     }
     
+    
     private Coordinate getCoordinate(Node node) {
 		if (node.hasProperty("lon") && node.hasProperty("lat")) {
 			Double lon = (Double) node.getProperty("lon");
@@ -255,19 +252,22 @@ public class OSMRoutingImporter
 		}
     }
     
-    private void setDistanceBetweenNodes(Node firstNode, Relationship rel, Node otherWayNode) {
+    private void setDistanceBetweenNodes(Node firstNode, Relationship rel, Node otherWayNode, Double speedLimit) {
 		Coordinate first = getCoordinate(firstNode);
 		Coordinate second = getCoordinate(otherWayNode);
-		
+		Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000;
 		if (first != null && second != null) {
-			rel.setProperty("distance_in_meters", OrthodromicDistance.calculateDistance(first, second) * 1000);
+			rel.setProperty("distance_in_meters", distance);
+			rel.setProperty("cost", distance / speedLimit);
 		}
 		
+		/*
 		else if(first == null)
 			rel.setProperty("distance_in_meters", 0);
+    	*/
     }
     
-    private void traverseWayToCalculateDistance(Node firstNode, String wayId) {
+    private void traverseWayToCalculateDistance(Node firstNode, String wayId, Double speedLimit) {
     	System.out.println("Calculating distances in Way: " + wayId);
     	
     	boolean foundSomeWayNode = true;
@@ -281,7 +281,7 @@ public class OSMRoutingImporter
 					wayId.equals(nodeRel.getProperty("wayID"))) 
 				{
 					Node otherWayNode = nodeRel.getOtherNode(firstNode);
-					setDistanceBetweenNodes(firstNode, nodeRel, otherWayNode);
+					setDistanceBetweenNodes(firstNode, nodeRel, otherWayNode, speedLimit);
 					firstNode = otherWayNode;
 					foundSomeWayNode = true;
 				}
@@ -292,12 +292,20 @@ public class OSMRoutingImporter
     private void traverseToCalculateDistances(Transaction tx) {
     	Iterable<Relationship> waysRelationships = importNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_WAY);
     	for (Relationship wayRel : waysRelationships) {
-    		//Node firstNode = Relationship??...getEndNode();
     		Node way = wayRel.getOtherNode(importNode);
+    		Double speedLimit;
+    		if(way.hasProperty("maxspeed")){		
+    			String speed = (String) way.getProperty("maxspeed");
+    			speedLimit = Double.parseDouble(speed);
+    		}
+    		
+    		else
+    			speedLimit = 50.00;
+    		
     		Relationship rel = way.getSingleRelationship(RelTypes.OSM_FIRSTNODE, Direction.OUTGOING);
     		Node firstNode = rel.getEndNode();
     		String wayId = (String) way.getProperty("id");
-    		traverseWayToCalculateDistance(firstNode, wayId);    			
+    		traverseWayToCalculateDistance(firstNode, wayId, speedLimit);    			
     		
     		tx.success();
     		tx.finish();
