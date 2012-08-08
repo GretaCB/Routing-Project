@@ -10,7 +10,9 @@ public class OsmRoutingRelationships
 	        OSM,
 			OSM_WAY,
 	        OSM_NODENEXT,
-	        OSM_FIRSTNODE
+	        OSM_FIRSTNODE,
+	        BIDIRECTIONAL_NEXT,
+	        ONEWAY_NEXT
 	}
 	
 }//end OsmRoutingRelationships class

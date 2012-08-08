@@ -50,7 +50,7 @@ public class OSMRoutingImporter
     protected Node importNode;
 	private int nodeCount = 0; //used to pace committing to graph
 	private String wayID;
-	
+	private String oneWayValue;
 	
 	//Constructor
 	public OSMRoutingImporter (GraphDatabaseService graphDb)
@@ -94,6 +94,7 @@ public class OSMRoutingImporter
             	boolean commitToGraph = false;
             	boolean wayNested = false; //used to detect whether or not the streamer is nested within a Way element
       			
+            	
             	while(streamReader.hasNext())
       			{
       				streamReader.next();
@@ -110,30 +111,27 @@ public class OSMRoutingImporter
       						
       						//Obtain wayID for connected Node relationships
       						wayID = streamReader.getAttributeValue(0);
-      						
+      					
       						//parse though the way tag's attributes and values
       						int count = streamReader.getAttributeCount();
-      						for(int i = 0; i < count; i++)
-      						{    
+      						for(int i = 0; i < count; i++){    
       							//insert Way element's properties into wayMap
-      			                wayMap.put(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i));      			               
+      			                wayMap.put(streamReader.getAttributeName(i).toString(), streamReader.getAttributeValue(i));  
+      			             
       						}
       						
       						wayNested = true;
       					} 
-      					else if(streamReader.getLocalName().equals("nd") && wayNested) 
-      					{
+      					else if(streamReader.getLocalName().equals("nd") && wayNested) {
       						//Insert nodeID into ArrayList if nested within a Way tag      			        	
       						nodeList.add(streamReader.getAttributeValue(0));      			      
       			        } 
-      					else if(streamReader.getLocalName().equals("tag") && wayNested)
-      			        {
+      					else if(streamReader.getLocalName().equals("tag") && wayNested){
       			        	//Insert tag elements into wayMap if relevant to routing
       			        	
       			        	//parse though tag attributes and values and check if way element is relevant to routing
       						int count = streamReader.getAttributeCount();
-      						for(int i = 0; i < count; i++)
-      						{    
+      						for(int i = 0; i < count; i++){    
       							//insert tag element's properties into wayMap
       			                wayMap.put(streamReader.getAttributeValue(0).toString(), streamReader.getAttributeValue(1).toString());
       			                
@@ -162,7 +160,14 @@ public class OSMRoutingImporter
 	  							//Add wayNode's highway name to the wayName index
 	  							if(entry.getKey().equals("name"))
 	  								wayNameIndex.add(wayNode, "name", entry.getValue());
+	  							
+	  							if(entry.getKey().equals("oneway"))
+	  								oneWayValue = entry.getValue();
 	  						}
+	  						//In case oneWayValue has a different value than yes/no or no value.
+	  						//In this case, the default should be a one way...?
+	  						if(oneWayValue.equals(null) || !oneWayValue.equals("no") || !oneWayValue.equals("yes"))
+	  							oneWayValue = "default";
 	  						
 	  						int count = nodeList.size();
 	  						for(int i = 0; i < count; i++)
@@ -173,15 +178,27 @@ public class OSMRoutingImporter
 	  							if(priorNode == wayNode){
 	  						    	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_FIRSTNODE);
 					               	rel.setProperty("wayID", wayID);
+					               	rel.setProperty("oneWay", oneWayValue);
 					               	priorNode = nd;
 	  							}
 	  							
-	  							else{
+	  							else if(oneWayValue.equals("no")){
 	  							//Create relationship between nodes and set wayID
-				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_NODENEXT);
+				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.BIDIRECTIONAL_NEXT);
 				               	rel.setProperty("wayID", wayID);
+				               	rel.setProperty("oneWay", oneWayValue);
 				               	priorNode = nd;
 	  							}
+	  							
+	  							//oneWayValue.equals("yes") || oneWayValue.equals("default")
+	  							else{
+	  							//Create relationship between nodes and set wayID
+					            Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.ONEWAY_NEXT);
+					            rel.setProperty("wayID", wayID);
+					            rel.setProperty("oneWay", oneWayValue);
+					            priorNode = nd;
+		  						}
+	  						
 	  						}//end for(int i = 0...)
       					}
       					
