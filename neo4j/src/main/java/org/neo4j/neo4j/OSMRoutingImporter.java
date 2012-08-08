@@ -166,7 +166,7 @@ public class OSMRoutingImporter
 	  						}
 	  						//In case oneWayValue has a different value than yes/no or no value.
 	  						//In this case, the default should be a one way...?
-	  						if(oneWayValue.equals(null) || !oneWayValue.equals("no") || !oneWayValue.equals("yes"))
+	  						if(oneWayValue == null || oneWayValue.trim().equals("") || !oneWayValue.equalsIgnoreCase("no") || !oneWayValue.equalsIgnoreCase("yes"))
 	  							oneWayValue = "default";
 	  						
 	  						int count = nodeList.size();
@@ -182,9 +182,9 @@ public class OSMRoutingImporter
 					               	priorNode = nd;
 	  							}
 	  							
-	  							else if(oneWayValue.equals("no")){
+	  							else if(oneWayValue.equalsIgnoreCase("yes")){
 	  							//Create relationship between nodes and set wayID
-				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.BIDIRECTIONAL_NEXT);
+				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.ONEWAY_NEXT);
 				               	rel.setProperty("wayID", wayID);
 				               	rel.setProperty("oneWay", oneWayValue);
 				               	priorNode = nd;
@@ -193,7 +193,7 @@ public class OSMRoutingImporter
 	  							//oneWayValue.equals("yes") || oneWayValue.equals("default")
 	  							else{
 	  							//Create relationship between nodes and set wayID
-					            Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.ONEWAY_NEXT);
+					            Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.BIDIRECTIONAL_NEXT);
 					            rel.setProperty("wayID", wayID);
 					            rel.setProperty("oneWay", oneWayValue);
 					            priorNode = nd;
@@ -291,7 +291,7 @@ public class OSMRoutingImporter
     	
     	boolean foundSomeWayNode = true;
     	while (foundSomeWayNode) {
-			Iterator<Relationship> nodesRelationships = firstNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_NODENEXT).iterator();
+			Iterator<Relationship> nodesRelationships = firstNode.getRelationships(Direction.OUTGOING, RelTypes.ONEWAY_NEXT, RelTypes.BIDIRECTIONAL_NEXT).iterator();
 			foundSomeWayNode = false;			
 			while (!foundSomeWayNode && nodesRelationships.hasNext()) {				
 				Relationship nodeRel = nodesRelationships.next();

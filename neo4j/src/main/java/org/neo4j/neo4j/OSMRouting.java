@@ -28,7 +28,7 @@ public class OSMRouting{
 	
 	 public void createRoute()
 		{
-	    	//Not sure when I need to start a new transaction...and I'm assuming this is the reason I'm getting a NotFoundException
+	
 	    	Transaction tx = graphDb.beginTx();
 	    	
 	    	try{
@@ -38,8 +38,9 @@ public class OSMRouting{
 	    	System.out.println("After EstimateEvaluator");
 	    	
 	    	Expander relExpander = Traversal.expanderForTypes(
-	                RelTypes.OSM_NODENEXT, Direction.BOTH );
-	    	relExpander.add( RelTypes.OSM_NODENEXT, Direction.BOTH );
+	                RelTypes.ONEWAY_NEXT, Direction.OUTGOING, RelTypes.BIDIRECTIONAL_NEXT, Direction.BOTH );
+	    	relExpander.add( RelTypes.ONEWAY_NEXT, Direction.OUTGOING );
+	    	relExpander.add( RelTypes.BIDIRECTIONAL_NEXT, Direction.BOTH );
 	    	System.out.println("After relationship expander");
 	    	
 	    	CostEvaluator<Double> costEval = CommonEvaluators.doubleCostEvaluator("distance_in_meters");
