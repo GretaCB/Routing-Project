@@ -8,31 +8,21 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-//import javax.swing.JFrame;
-//import javax.swing.JOptionPane;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+//import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.neo4j.gis.spatial.pipes.processing.OrthodromicDistance;
 import org.neo4j.graphdb.Direction;
-//import org.neo4j.graphdb.Expander;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-//import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-//import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
-//import org.neo4j.kernel.Traversal;
 import org.neo4j.neo4j.OsmRoutingRelationships.RelTypes;
-//import org.neo4j.graphalgo.CommonEvaluators;
-//import org.neo4j.graphalgo.CostEvaluator;
-//import org.neo4j.graphalgo.EstimateEvaluator;
-//import org.neo4j.graphalgo.GraphAlgoFactory;
-//import org.neo4j.graphalgo.PathFinder;
-//import org.neo4j.graphalgo.WeightedPath;
 
 import com.vividsolutions.jts.geom.Coordinate;
 
@@ -50,6 +40,7 @@ public class OSMRoutingImporter
 	private int nodeCount = 0; //used to pace committing to graph
 	private String wayID;
 	private String oneWayValue;
+	private boolean miles;
 	
 	//Constructor
 	public OSMRoutingImporter (GraphDatabaseService graphDb)
@@ -106,8 +97,6 @@ public class OSMRoutingImporter
       						nodeList.clear();
       						commitToGraph = false;
       						
-      						//Insert Way element's properties into wayMap
-      						
       						//Obtain wayID for connected Node relationships
       						wayID = streamReader.getAttributeValue(0);
       					
@@ -121,13 +110,13 @@ public class OSMRoutingImporter
       						
       						wayNested = true;
       					} 
+      					
       					else if(streamReader.getLocalName().equals("nd") && wayNested) {
       						//Insert nodeID into ArrayList if nested within a Way tag      			        	
       						nodeList.add(streamReader.getAttributeValue(0));      			      
       			        } 
-      					else if(streamReader.getLocalName().equals("tag") && wayNested){
-      			        	//Insert tag elements into wayMap if relevant to routing
-      			        	
+      					
+      					else if(streamReader.getLocalName().equals("tag") && wayNested){	
       			        	//parse though tag attributes and values and check if way element is relevant to routing
       						int count = streamReader.getAttributeCount();
       						for(int i = 0; i < count; i++){    
@@ -139,8 +128,10 @@ public class OSMRoutingImporter
       			                	commitToGraph = true;
       			                }      			                     			                
       						}
-      			        }
-      				} else if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName().equals("way")) {
+      			        }	
+      				} 
+      				
+      				else if(streamReader.getEventType() == XMLStreamReader.END_ELEMENT && streamReader.getLocalName().equals("way")) {
       					if (commitToGraph) {
 	  						Node wayNode = graphDb.createNode();
 	  						
@@ -164,7 +155,7 @@ public class OSMRoutingImporter
 	  								oneWayValue = entry.getValue();
 	  						}
 	  						//In case oneWayValue has a different value than yes/no or no value.
-	  						//In this case, the default should be a one way...?
+	  						//In this case, the default should be a two way
 	  						if(oneWayValue == null || oneWayValue.trim().equals("") || (!oneWayValue.equalsIgnoreCase("no") && !oneWayValue.equalsIgnoreCase("yes")))
 	  							oneWayValue = "default";
 	  						
@@ -189,7 +180,7 @@ public class OSMRoutingImporter
 				               	priorNode = nd;
 	  							}
 	  							
-	  							//else...oneWayValue.equals("yes") || oneWayValue.equals("default")
+	  							//else...oneWayValue.equals("no") || oneWayValue.equals("default")
 	  							else{
 	  							//Create relationship between nodes and set wayID
 					            Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.BIDIRECTIONAL_NEXT);
@@ -217,7 +208,6 @@ public class OSMRoutingImporter
       			//Parse through graphDb again to add Node Info to indexed nodes
       			System.out.println("Parsing through 2nd time for Node data...");
       			getNodeInfo();
-      			//testWayIndex();
       			
       			//Traverse graph to add distance between nodes
           		System.out.println("Traversing graph for distance between nodes...");
@@ -226,11 +216,9 @@ public class OSMRoutingImporter
       			//Commit the remaining nodes, if nodeCount < 50000
       			tx.success();
       			
-      			//createRoute();
-      			
-      		}      		
-      		finally
-            {
+      		}
+      		
+      		finally{
                  tx.finish();
             }
             		
@@ -271,7 +259,23 @@ public class OSMRoutingImporter
     private void setDistanceBetweenNodes(Node firstNode, Relationship rel, Node otherWayNode, Double speedLimit) {
 		Coordinate first = getCoordinate(firstNode);
 		Coordinate second = getCoordinate(otherWayNode);
-		if (first != null && second != null) {
+		double oneMeterInMiles = 0.000621371192237334;
+		//Calculate distance for miles
+		if(first != null && second != null && miles == true){
+			Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000; //in meters
+			//Convert distance in meters to distance in miles
+			distance = distance * oneMeterInMiles;
+			
+			//Not sure about this next line...should I do miles per minute? since it is already in miles and hours?
+			Double milesPerSec = speedLimit / 3.6; //1 meter per second = 3.6 km per hour...this will convert the speed into meters
+			
+			rel.setProperty("distance_in_miles", distance);
+			//cost is the number of seconds to travel the distance in an hour traveling the max speed
+			rel.setProperty("secondsToTravel", (distance / milesPerSec));
+		}
+		
+		//Calculate distance for km
+		if (first != null && second != null && miles == false) {
 			Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000;
 			Double metersPerSec = speedLimit / 3.6; //1 meter per second = 3.6 km per hour...this will convert the speed into meters
 			
@@ -293,7 +297,7 @@ public class OSMRoutingImporter
 			foundSomeWayNode = false;			
 			while (!foundSomeWayNode && nodesRelationships.hasNext()) {				
 				Relationship nodeRel = nodesRelationships.next();
-				if (!nodeRel.hasProperty("distance_in_meters") && 
+				if ((!nodeRel.hasProperty("distance_in_meters") && !nodeRel.hasProperty("distance_in_miles")) && 
 					nodeRel.hasProperty("wayID") && 
 					wayId.equals(nodeRel.getProperty("wayID"))) 
 				{
@@ -307,17 +311,29 @@ public class OSMRoutingImporter
     }
     
     private void traverseToCalculateDistances(Transaction tx) {
+    	miles = false; //reset miles variable	
     	Iterable<Relationship> waysRelationships = importNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_WAY);
     	for (Relationship wayRel : waysRelationships) {
     		Node way = wayRel.getOtherNode(importNode);
     		Double speedLimit;
     		if(way.hasProperty("maxspeed")){		
     			String speed = (String) way.getProperty("maxspeed");
+    			//Check for mph
+    			if(speed.contains("m")){
+    				miles = true;
+    				speed = StringUtils.left(speed, 2);	
+    			}
+    			
     			speedLimit = Double.parseDouble(speed);
     		}
     		
-    		else
-    			speedLimit = 50.00;
+    		//set to default
+    		else{
+    			if(miles == true)
+    				speedLimit = 35.00; //miles
+    			else
+    				speedLimit = 50.00; //km
+    		}
     		
     		Relationship rel = way.getSingleRelationship(RelTypes.OSM_FIRSTNODE, Direction.OUTGOING);
     		Node firstNode = rel.getEndNode();
@@ -382,7 +398,5 @@ public class OSMRoutingImporter
   					osmNode = null;
 			    }//end if streamReader.getEventType() == END.ELEMENT...
   			}//end while
-  		
-    	
     }//end getNodeInfo
 }//end OSMImporterNew
