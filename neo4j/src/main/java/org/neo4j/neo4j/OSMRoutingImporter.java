@@ -39,8 +39,7 @@ import com.vividsolutions.jts.geom.Coordinate;
 
 public class OSMRoutingImporter 
 {
-	//Neo4j variables
-	//private String osmImport_DB;
+
 	protected GraphDatabaseService graphDb;
 	private String osmXmlFilePath;
     private static Index<Node> nodeIdIndex;
@@ -166,7 +165,7 @@ public class OSMRoutingImporter
 	  						}
 	  						//In case oneWayValue has a different value than yes/no or no value.
 	  						//In this case, the default should be a one way...?
-	  						if(oneWayValue == null || oneWayValue.trim().equals("") || !oneWayValue.equalsIgnoreCase("no") || !oneWayValue.equalsIgnoreCase("yes"))
+	  						if(oneWayValue == null || oneWayValue.trim().equals("") || (!oneWayValue.equalsIgnoreCase("no") && !oneWayValue.equalsIgnoreCase("yes")))
 	  							oneWayValue = "default";
 	  						
 	  						int count = nodeList.size();
@@ -190,7 +189,7 @@ public class OSMRoutingImporter
 				               	priorNode = nd;
 	  							}
 	  							
-	  							//oneWayValue.equals("yes") || oneWayValue.equals("default")
+	  							//else...oneWayValue.equals("yes") || oneWayValue.equals("default")
 	  							else{
 	  							//Create relationship between nodes and set wayID
 					            Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.BIDIRECTIONAL_NEXT);
@@ -272,18 +271,17 @@ public class OSMRoutingImporter
     private void setDistanceBetweenNodes(Node firstNode, Relationship rel, Node otherWayNode, Double speedLimit) {
 		Coordinate first = getCoordinate(firstNode);
 		Coordinate second = getCoordinate(otherWayNode);
-		Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000;
-		Double speedKMperSec = speedLimit / 3.6; //1 meter per second = 3.6 km per hour...this will convert the speed into meters
 		if (first != null && second != null) {
+			Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000;
+			Double metersPerSec = speedLimit / 3.6; //1 meter per second = 3.6 km per hour...this will convert the speed into meters
+			
 			rel.setProperty("distance_in_meters", distance);
 			//cost is the number of seconds to travel the distance in an hour traveling the max speed
-			rel.setProperty("cost", distance / speedKMperSec); 
+			rel.setProperty("secondsToTravel", (distance / metersPerSec)); 
 		}
 		
-		/*
-		else if(first == null)
-			rel.setProperty("distance_in_meters", 0);
-    	*/
+		
+		
     }
     
     private void traverseWayToCalculateDistance(Node firstNode, String wayId, Double speedLimit) {
