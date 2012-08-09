@@ -259,23 +259,9 @@ public class OSMRoutingImporter
     private void setDistanceBetweenNodes(Node firstNode, Relationship rel, Node otherWayNode, Double speedLimit) {
 		Coordinate first = getCoordinate(firstNode);
 		Coordinate second = getCoordinate(otherWayNode);
-		double oneMeterInMiles = 0.000621371192237334;
-		//Calculate distance for miles
-		if(first != null && second != null && miles == true){
-			Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000; //in meters
-			//Convert distance in meters to distance in miles
-			distance = distance * oneMeterInMiles;
-			
-			//Not sure about this next line...should I do miles per minute? since it is already in miles and hours?
-			Double milesPerSec = speedLimit / 3.6; //1 meter per second = 3.6 km per hour...this will convert the speed into meters
-			
-			rel.setProperty("distance_in_miles", distance);
-			//cost is the number of seconds to travel the distance in an hour traveling the max speed
-			rel.setProperty("secondsToTravel", (distance / milesPerSec));
-		}
 		
 		//Calculate distance for km
-		if (first != null && second != null && miles == false) {
+		if (first != null && second != null) {
 			Double distance = OrthodromicDistance.calculateDistance(first, second) * 1000;
 			Double metersPerSec = speedLimit / 3.6; //1 meter per second = 3.6 km per hour...this will convert the speed into meters
 			
@@ -297,7 +283,7 @@ public class OSMRoutingImporter
 			foundSomeWayNode = false;			
 			while (!foundSomeWayNode && nodesRelationships.hasNext()) {				
 				Relationship nodeRel = nodesRelationships.next();
-				if ((!nodeRel.hasProperty("distance_in_meters") && !nodeRel.hasProperty("distance_in_miles")) && 
+				if (!nodeRel.hasProperty("distance_in_meters") && 
 					nodeRel.hasProperty("wayID") && 
 					wayId.equals(nodeRel.getProperty("wayID"))) 
 				{
@@ -318,22 +304,26 @@ public class OSMRoutingImporter
     		Double speedLimit;
     		if(way.hasProperty("maxspeed")){		
     			String speed = (String) way.getProperty("maxspeed");
+    			
     			//Check for mph
     			if(speed.contains("m")){
     				miles = true;
-    				speed = StringUtils.left(speed, 2);	
+    				speed = StringUtils.left(speed, 2);
+    				speedLimit = Double.parseDouble(speed);
+    				
+    				//Convert from miles per hr to kilometers per hr
+    				//One mile = 1.609 km
+    				speedLimit = speedLimit * 1.609;
     			}
     			
-    			speedLimit = Double.parseDouble(speed);
+    			else
+    				speedLimit = Double.parseDouble(speed);
     		}
     		
     		//set to default
-    		else{
-    			if(miles == true)
-    				speedLimit = 35.00; //miles
-    			else
-    				speedLimit = 50.00; //km
-    		}
+    		else
+    			speedLimit = 50.00; //km
+    		
     		
     		Relationship rel = way.getSingleRelationship(RelTypes.OSM_FIRSTNODE, Direction.OUTGOING);
     		Node firstNode = rel.getEndNode();
