@@ -40,7 +40,6 @@ public class OSMRoutingImporter
 	private int nodeCount = 0; //used to pace committing to graph
 	private String wayID;
 	private String oneWayValue;
-	private boolean miles;
 	
 	//Constructor
 	public OSMRoutingImporter (GraphDatabaseService graphDb)
@@ -193,34 +192,39 @@ public class OSMRoutingImporter
       					}
       					
   						wayNested = false; //Reset Nested boolean
+  						//oneWayValue = ""; //Reset oneWayValue
   			        }
       				
-      				if(nodeCount == 50000)
+      				if(nodeCount >= 50000)
       				{
             			tx.success();
             			tx.finish();
             			tx = graphDb.beginTx();
-            			
+            			System.out.println("COMMITTED!");
             			nodeCount = 0;
       				}
       			}//end while streamReader.hasNext()
       			
+            	streamReader.close();
+            	
+            	//Commit the remaining nodes, if nodeCount < 50000
+            	tx.success();
+    			tx.finish();
+    			tx = graphDb.beginTx();
+            	
       			//Parse through graphDb again to add Node Info to indexed nodes
       			System.out.println("Parsing through 2nd time for Node data...");
-      			getNodeInfo();
+      			getNodeInfo(tx);
       			
       			//Traverse graph to add distance between nodes
           		System.out.println("Traversing graph for distance between nodes...");
           		traverseToCalculateDistances(tx);
-
-      			//Commit the remaining nodes, if nodeCount < 50000
-      			tx.success();
       			
       		}
       		
       		finally{
-                 tx.finish();
-            }
+      			 tx.finish();
+      		}
             		
       		
     }//end importXML
@@ -296,8 +300,7 @@ public class OSMRoutingImporter
     	}
     }
     
-    private void traverseToCalculateDistances(Transaction tx) {
-    	miles = false; //reset miles variable	
+    private void traverseToCalculateDistances(Transaction tx) {	
     	Iterable<Relationship> waysRelationships = importNode.getRelationships(Direction.OUTGOING, RelTypes.OSM_WAY);
     	for (Relationship wayRel : waysRelationships) {
     		Node way = wayRel.getOtherNode(importNode);
@@ -307,7 +310,6 @@ public class OSMRoutingImporter
     			
     			//Check for mph
     			if(speed.contains("m")){
-    				miles = true;
     				speed = StringUtils.left(speed, 2);
     				speedLimit = Double.parseDouble(speed);
     				
@@ -341,7 +343,7 @@ public class OSMRoutingImporter
     
     
     //Parse through xml file again to gather info from indexed "Node" elements
-    private void getNodeInfo() throws FileNotFoundException, XMLStreamException
+    private void getNodeInfo(Transaction tx) throws FileNotFoundException, XMLStreamException
     {
     	XMLInputFactory factory = XMLInputFactory.newInstance();
     	Node osmNode = null;
@@ -375,7 +377,17 @@ public class OSMRoutingImporter
   			              			osmNode.setProperty(k, streamReader.getAttributeValue(i));
   			              		}
   			              	}
-  			            }      	
+  			            }  
+  						
+  						if(nodeCount >= 50000)
+  					     {
+  					           tx.success();
+  					           tx.finish();
+  					           tx = graphDb.beginTx();
+  					           System.out.println("COMMITTED!");
+  					           nodeCount = 0;
+  					     }
+  						
   		   			} 
   					else if(streamReader.getLocalName().equals("tag") && osmNode != null)
   			        {
@@ -388,5 +400,8 @@ public class OSMRoutingImporter
   					osmNode = null;
 			    }//end if streamReader.getEventType() == END.ELEMENT...
   			}//end while
+   			
+   			streamReader.close();
+   			
     }//end getNodeInfo
 }//end OSMImporterNew
