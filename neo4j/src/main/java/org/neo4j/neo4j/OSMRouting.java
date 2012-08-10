@@ -57,9 +57,15 @@ public class OSMRouting{
 			startNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the Start Node: ");
 			endNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the End Node: ");
 		  	*/
-			
-			Node startNode = OSMRoutingImporter.getOsmNode("278451834");
+	    	
+	    	//delaware nodes to route...
+			Node startNode = OSMRoutingImporter.getOsmNode("178741192");
+			Node endNode = OSMRoutingImporter.getOsmNode("178722292");
+			/*
+	    	//liechtenstein nodes to route
+	    	Node startNode = OSMRoutingImporter.getOsmNode("278451834");
 			Node endNode = OSMRoutingImporter.getOsmNode("268222979");
+			*/
 			//long startNodeid = Long.parseLong(startNodeID);
 		  	//long endNodeid = Long.parseLong(endNodeID);
 			System.out.println(startNode.getProperty("id")); 

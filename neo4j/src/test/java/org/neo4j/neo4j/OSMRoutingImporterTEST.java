@@ -20,7 +20,7 @@ public class OSMRoutingImporterTEST
 	 * @param args
 	 */
 	public static String graphDbPath = "target/osmImport-db";
-	public static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
+	public static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\delaware.osm";
 
 	public static GraphDatabaseService graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( graphDbPath );
 	

@@ -216,6 +216,10 @@ public class OSMRoutingImporter
       			System.out.println("Parsing through 2nd time for Node data...");
       			getNodeInfo(tx);
       			
+      			tx.success();
+    			tx.finish();
+    			tx = graphDb.beginTx();
+      			
       			//Traverse graph to add distance between nodes
           		System.out.println("Traversing graph for distance between nodes...");
           		traverseToCalculateDistances(tx);
@@ -347,6 +351,7 @@ public class OSMRoutingImporter
     {
     	XMLInputFactory factory = XMLInputFactory.newInstance();
     	Node osmNode = null;
+    	nodeCount = 0;
     	
    			XMLStreamReader streamReader = factory.createXMLStreamReader(
    				    new FileReader(osmXmlFilePath));
@@ -361,10 +366,13 @@ public class OSMRoutingImporter
   					//*******************************************************
   					if(streamReader.getLocalName().equals("node"))
   		   			{
-  				        osmNode = getOsmNode(streamReader.getAttributeValue(0));  				        	
+  				        
+  						osmNode = getOsmNode(streamReader.getAttributeValue(0));  				        	
   						if(osmNode != null)
   			            {
-  			              	//Insert Node properties into nodeMap
+  							nodeCount++;
+  							
+  							//Insert Node properties into nodeMap
   			              	int count = streamReader.getAttributeCount();
   			              	for(int i = 0; i < count; i++)
   			              	{    
