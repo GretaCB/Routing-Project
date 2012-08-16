@@ -34,6 +34,7 @@ public class OSMRoutingImporter {
     private static Index<Node> wayIdIndex;
     private Index<Node> wayNameIndex;
     private final static String NODE_ID = "node_id";
+    private final static String WAY_ID = "way_id";
     protected Node importNode;
 	private int nodeCount = 0; //used to pace committing to graph
 	private String wayID;
@@ -154,6 +155,24 @@ public class OSMRoutingImporter {
 	  							Node nd = getOsmNode(nodeList.get(i));	  							
 	  							if(nd == null)
 	  								nd = createAndIndexNode(nodeList.get(i));
+	  							
+	  							//One-way crossroads
+	  							else if(nd != null && oneWayValue.equalsIgnoreCase("yes") && priorNode != wayNode) {
+		  							Relationship rel = wayNode.createRelationshipTo(priorNode, RelTypes.ONEWAY_SHORTCUT);
+		  							rel.setProperty("wayID", wayID);
+						            rel.setProperty("oneWay", oneWayValue);
+	  							}
+	  							
+	  							else if(nd != null && !oneWayValue.equalsIgnoreCase("yes") && priorNode != wayNode) {
+	  								Iterator<Relationship> nodesRelationships = nd.getRelationships(Direction.OUTGOING, RelTypes.ONEWAY_NEXT, RelTypes.BIDIRECTIONAL_NEXT).iterator();
+	  								//if not a FIRST_NODE relationship
+	  								if(nodesRelationships.hasNext()) {
+	  									Relationship rel = wayNode.createRelationshipTo(priorNode, RelTypes.BIDIRECTIONAL_SHORTCUT);
+	  									rel.setProperty("wayID", wayID);
+	  									rel.setProperty("oneWay", oneWayValue);
+	  								}
+	  							}
+	  							
 	  							if(priorNode == wayNode) {
 	  						    	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.OSM_FIRSTNODE);
 					               	rel.setProperty("wayID", wayID);
@@ -162,27 +181,28 @@ public class OSMRoutingImporter {
 	  							}
 	  							
 	  							else if(oneWayValue.equalsIgnoreCase("yes")) {
-	  							//Create relationship between nodes and set wayID
-				               	Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.ONEWAY_NEXT);
-				               	rel.setProperty("wayID", wayID);
-				               	rel.setProperty("oneWay", oneWayValue);
-				               	priorNode = nd;
+	  								//Create relationship between nodes and set wayID
+	  								Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.ONEWAY_NEXT);
+	  								rel.setProperty("wayID", wayID);
+	  								rel.setProperty("oneWay", oneWayValue);
+	  								priorNode = nd;
 	  							}
 	  							
 	  							//else...oneWayValue.equals("no") || oneWayValue.equals("default")
 	  							else {
-	  							//Create relationship between nodes and set wayID
-					            Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.BIDIRECTIONAL_NEXT);
-					            rel.setProperty("wayID", wayID);
-					            rel.setProperty("oneWay", oneWayValue);
-					            priorNode = nd;
+	  								//Create relationship between nodes and set wayID
+	  								Relationship rel = priorNode.createRelationshipTo(nd, RelTypes.BIDIRECTIONAL_NEXT);
+	  								rel.setProperty("wayID", wayID);
+	  								rel.setProperty("oneWay", oneWayValue);
+	  								priorNode = nd;
 		  						}
 	  						
 	  						}//end for(int i = 0...)
 	  						
 	  						//Add shortcut relationships between wayNodes and last node in the way...(crossroads??)
 	  						//Not sure if this is the best solution
-	  						//Also, have to figure out how to sum up the distance between all the nodes and then add to this relationship
+	  						//Also, have to figure out how to sum up the distance between all the nodes and then add to this relationship...
+	  						//Would that entail a separate traversal??
 	  						if(oneWayValue.equalsIgnoreCase("yes")) {
 	  							Relationship rel = wayNode.createRelationshipTo(priorNode, RelTypes.ONEWAY_SHORTCUT);
 	  							rel.setProperty("wayID", wayID);
@@ -249,7 +269,12 @@ public class OSMRoutingImporter {
         return node;
     }//end createAndIndexNode()
 
-
+    
+    public static Node getOsmWay(String id) {
+    	IndexHits<Node> checkForID = wayIdIndex.get( WAY_ID, id );
+    	return checkForID.getSingle();
+    }
+    
     public static Node getOsmNode(String id) {
     	IndexHits<Node> checkForID = nodeIdIndex.get( NODE_ID, id );
     	return checkForID.getSingle();

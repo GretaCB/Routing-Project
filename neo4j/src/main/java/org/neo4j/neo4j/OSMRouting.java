@@ -20,14 +20,12 @@ public class OSMRouting{
 	
 	protected GraphDatabaseService graphDb;
 	
-	public OSMRouting(GraphDatabaseService graphDb)
-	{
+	public OSMRouting(GraphDatabaseService graphDb) {
 		
 		this.graphDb = graphDb;
 	}
 	
-	 public void createRoute()
-		{
+	 public void createRoute() {
 	
 	    	Transaction tx = graphDb.beginTx();
 	    	
@@ -57,32 +55,28 @@ public class OSMRouting{
 			startNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the Start Node: ");
 			endNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the End Node: ");
 		  	*/
-	    	
+	    	/*
 	    	//delaware nodes to route...
 			Node startNode = OSMRoutingImporter.getOsmNode("178741192");
 			Node endNode = OSMRoutingImporter.getOsmNode("178722292");
-			/*
+			*/
+	    	
 	    	//liechtenstein nodes to route
 	    	Node startNode = OSMRoutingImporter.getOsmNode("278451834");
 			Node endNode = OSMRoutingImporter.getOsmNode("268222979");
-			*/
-			//long startNodeid = Long.parseLong(startNodeID);
-		  	//long endNodeid = Long.parseLong(endNodeID);
+			
 			System.out.println(startNode.getProperty("id")); 
 			System.out.println(endNode.getProperty("id"));
-		  	//Node start = graphDb.getNodeById(startNode);
-		  	//Node end = graphDb.getNodeById(endNode);
+
 		  	Path route = finder.findSinglePath(startNode, endNode); 
 		  	
-		  	for ( Node node : route.nodes() )
-	        {
+		  	for ( Node node : route.nodes() ) {
 		  		System.out.println( node.getProperty( "id" ) );
 	        }
 		  	
 	    	}//end try
 	    	
-	    	finally
-	        {
+	    	finally {
 	    		tx.finish();
 	        }
 		  	  
