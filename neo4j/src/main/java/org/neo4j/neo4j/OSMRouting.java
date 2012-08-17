@@ -19,10 +19,15 @@ import org.neo4j.neo4j.OSMRoutingImporter;
 public class OSMRouting{
 	
 	protected GraphDatabaseService graphDb;
+	protected String startNodeID;
+	protected String endNodeID;
 	
-	public OSMRouting(GraphDatabaseService graphDb) {
+	
+	public OSMRouting(GraphDatabaseService graphDb, String startNodeID, String endNodeID) {
 		
 		this.graphDb = graphDb;
+		this.startNodeID = startNodeID;
+		this.endNodeID = endNodeID;
 	}
 	
 	 public void createRoute() {
@@ -60,11 +65,16 @@ public class OSMRouting{
 			Node startNode = OSMRoutingImporter.getOsmNode("178741192");
 			Node endNode = OSMRoutingImporter.getOsmNode("178722292");
 			*/
-	    	
+	    	/*
 	    	//liechtenstein nodes to route
 	    	Node startNode = OSMRoutingImporter.getOsmNode("278451834");
 			Node endNode = OSMRoutingImporter.getOsmNode("268222979");
-			
+			*/
+	    	
+	    	//Test class nodes to route (passed from constructor)
+			Node startNode = OSMRoutingImporter.getOsmNode(startNodeID);
+			Node endNode = OSMRoutingImporter.getOsmNode(endNodeID);
+	    	
 			System.out.println(startNode.getProperty("id")); 
 			System.out.println(endNode.getProperty("id"));
 

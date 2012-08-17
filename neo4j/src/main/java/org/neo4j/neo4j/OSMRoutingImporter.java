@@ -156,13 +156,25 @@ public class OSMRoutingImporter {
 	  							if(nd == null)
 	  								nd = createAndIndexNode(nodeList.get(i));
 	  							
-	  							//One-way crossroads
+	  							
+	  							//The SHORTCUT issue is happening somewhere between these next two else-if statements
+	  							//...but I'm not sure why. It is creating a shortcut to every node just before a cross road
+		  						//Add SHORTCUT relationships for cross roads to optimize routing
+		  						//Have to figure out how to sum up the distance between all the nodes and then add to this relationship...
+		  						//That may entail a separate traversal
+	  							
+	  							//One-way cross roads
 	  							else if(nd != null && oneWayValue.equalsIgnoreCase("yes") && priorNode != wayNode) {
-		  							Relationship rel = wayNode.createRelationshipTo(priorNode, RelTypes.ONEWAY_SHORTCUT);
-		  							rel.setProperty("wayID", wayID);
-						            rel.setProperty("oneWay", oneWayValue);
+	  								Iterator<Relationship> nodesRelationships = nd.getRelationships(Direction.OUTGOING, RelTypes.ONEWAY_NEXT, RelTypes.BIDIRECTIONAL_NEXT).iterator();
+	  								//if not a FIRST_NODE relationship
+	  								if(nodesRelationships.hasNext()) {
+	  									Relationship rel = wayNode.createRelationshipTo(priorNode, RelTypes.ONEWAY_SHORTCUT);
+	  									rel.setProperty("wayID", wayID);
+	  									rel.setProperty("oneWay", oneWayValue);
+	  								}
 	  							}
 	  							
+	  							//Two-way cross roads
 	  							else if(nd != null && !oneWayValue.equalsIgnoreCase("yes") && priorNode != wayNode) {
 	  								Iterator<Relationship> nodesRelationships = nd.getRelationships(Direction.OUTGOING, RelTypes.ONEWAY_NEXT, RelTypes.BIDIRECTIONAL_NEXT).iterator();
 	  								//if not a FIRST_NODE relationship
@@ -199,10 +211,10 @@ public class OSMRoutingImporter {
 	  						
 	  						}//end for(int i = 0...)
 	  						
-	  						//Add shortcut relationships between wayNodes and last node in the way...(crossroads??)
-	  						//Not sure if this is the best solution
-	  						//Also, have to figure out how to sum up the distance between all the nodes and then add to this relationship...
-	  						//Would that entail a separate traversal??
+	  						
+	  						//Add SHORTCUT relationships for cross roads to optimize routing
+	  						//Have to figure out how to sum up the distance between all the nodes and then add to this relationship...
+	  						//That may entail a separate traversal
 	  						if(oneWayValue.equalsIgnoreCase("yes")) {
 	  							Relationship rel = wayNode.createRelationshipTo(priorNode, RelTypes.ONEWAY_SHORTCUT);
 	  							rel.setProperty("wayID", wayID);

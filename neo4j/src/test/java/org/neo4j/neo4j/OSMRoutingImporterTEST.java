@@ -1,27 +1,20 @@
 package org.neo4j.neo4j;
-//import org.neo4j.graphdb.GraphDatabaseService;
-//import org.neo4j.graphdb.Node;
-//import org.neo4j.graphdb.Path;
-//import org.neo4j.graphdb.traversal.Evaluation;
-//import org.neo4j.graphdb.traversal.Evaluator;
-//import org.neo4j.graphdb.traversal.Evaluators;
-//import org.neo4j.graphdb.traversal.TraversalDescription;
-//import org.neo4j.kernel.Traversal;
+
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.neo4j.OSMRoutingImporter;
 
 
-public class OSMRoutingImporterTEST 
-{
-	//public static Evaluator e = new Evaluator();
+public class OSMRoutingImporterTEST {
 	/**
 	 * @param args
 	 */
 	public static String graphDbPath = "target/osmImport-db";
 	public static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
-
+	public static String startNodeID = "278451834";
+	public static String endNodeID = "268222979";
+	
 	public static GraphDatabaseService graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( graphDbPath );
 	
 	public static void main(String[] args) throws Exception 
@@ -31,7 +24,7 @@ public class OSMRoutingImporterTEST
 
 		importer.importXML(osmXmlFilePath);
 		
-		OSMRouting router = new OSMRouting (graphDb);
+		OSMRouting router = new OSMRouting (graphDb, startNodeID, endNodeID);
 		
 		System.out.println("Creating route...");
 		router.createRoute();
