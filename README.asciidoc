@@ -45,13 +45,18 @@ I have created a routing test class (https://github.com/GretaCB/Routing-Project/
 You will need an OpenStreetMap XML file, also the node ID for a Start and End node.
 
 I used the following nodes for my tests...
+
 Delaware:
-Start Node 178741192 http://www.openstreetmap.org/browse/node/178741192
-End Node 178722292 http://www.openstreetmap.org/browse/node/178722292
+
+* Start Node 178741192 http://www.openstreetmap.org/browse/node/178741192
+
+* End Node 178722292 http://www.openstreetmap.org/browse/node/178722292
 
 Liechtenstein:
-Start Node 278451834 http://www.openstreetmap.org/browse/node/278451834
-End Node 268222979 http://www.openstreetmap.org/browse/node/268222979
+
+* Start Node 278451834 http://www.openstreetmap.org/browse/node/278451834
+
+* End Node 268222979 http://www.openstreetmap.org/browse/node/268222979
  
 == Dependencies used in project's pom.xml ==
 
