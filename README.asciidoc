@@ -20,31 +20,43 @@ uDig is an open source GIS desktop application framework.
 
 == Included Features ==
 OSM Routing Importer: The OSM Importer is used to parse OpenStreetMap XML files to extract relevant nodes for routing.
+
 * The Importer uses the event-based Streaming API for XML (StAX)
 (http://stax.codehaus.org/). For further opimization, there is consideration for using the following parser instead: http://woodstox.codehaus.org/4.1.0/javadoc/index.html.
+
 * Distance between nodes is calculated using Neo4j's Orthodromic Distance class and Vivid Solution's Coordinate class:
+
 Orthodromic Distance:
 http://components.neo4j.org/neo4j-spatial/0.7/apidocs/index.html?org/neo4j/gis/spatial/pipes/processing/package-tree.html
+
 Coordinate:
 http://www.vividsolutions.com/jts/javadoc/com/vividsolutions/jts/geom/Coordinate.html
 
 The Importer is not complete. However, in its current state, it includes the following features:
+
 * One-way and Bidirectional streets
+
 * Miles and Kilometers: Can import OSM data using both miles or kilometers. Tested using OSM files for both US (Delaware: http://download.geofabrik.de/osm/north-america/us/) and Europe (Liechtenstein: http://download.geofabrik.de/osm/europe/)
+
 * ATTENTION (Bug Info): Development was started on creating SHORTCUT relationships between crossroads to optimize routing. However, this is still in progress. 
 
 == How to Test ==
 I have created a routing test class (https://github.com/GretaCB/Routing-Project/blob/master/neo4j/src/test/java/org/neo4j/neo4j/OSMRoutingProjectTEST.java) that you can run in Eclipse.
+
 You will need an OpenStreetMap XML file, also the node ID for a Start and End node.
 
 I used the following for my tests:
 
 Delaware:
+
 Start Node 178741192 http://www.openstreetmap.org/browse/node/178741192
+
 End Node 178722292 http://www.openstreetmap.org/browse/node/178722292
 
 Liechtenstein:
+
 Start Node 278451834 http://www.openstreetmap.org/browse/node/278451834
+
 End Node 268222979 http://www.openstreetmap.org/browse/node/268222979
  
 == Dependencies used in project's pom.xml ==
