@@ -1,0 +1,126 @@
+== Neo4j/OSM Routing Project ==
+
+"Implementing route analysis of OpenStreetMap (OSM) data within uDig, using the Neo4j-Spatial graph database" (http://udig.refractions.net/confluence/display/HACK/Neo4j+Shortest+Path+API+for+OSM+data)
+
+This project began during Google Summer of Code 2012, by Carol Hansen and mentored by Davide Savazzi. The project was supported by both Neo4j and User-friendly Desktop Internet GIS (uDig) communities. It is intended to be expanded as a uDig plugin, allowing uDig users to plot shortest-path routes using OpenStreetMap data.
+
+More about OpenStreetMap (OSM):
+OpenStreetMap is a free worldwide map, created by people like you.
+(http://wiki.openstreetmap.org/wiki/Main_Page).
+
+More about Neo4j:
+Neo4j Spatial is a library facilitating the import, storage and querying of spatial data in the [Neo4j open source graph database](http://neo4j.org/).
+
+More about uDig:
+uDig is an open source GIS desktop application framework.
+(http://udig.refractions.net/).
+
+
+== Included Features ==
+OSM Routing Importer: The OSM Importer is used to parse OpenStreetMap XML files to extract relevant nodes for routing.
+* The Importer uses the event-based Streaming API for XML (StAX)
+(http://stax.codehaus.org/). For further opimization, there is consideration for using the following parser instead: http://woodstox.codehaus.org/4.1.0/javadoc/index.html.
+* Distance between nodes is calculated using Neo4j's Orthodromic Distance class and Vivid Solution's Coordinate class:
+
+Orthodromic Distance:
+http://components.neo4j.org/neo4j-spatial/0.7/apidocs/index.html?org/neo4j/gis/spatial/pipes/processing/package-tree.html
+
+Coordinate:
+http://www.vividsolutions.com/jts/javadoc/com/vividsolutions/jts/geom/Coordinate.html
+
+
+The Importer is not complete. However, in its current state, it includes the following features:
+
+* One-way and Bidirectional streets
+* Miles and Kilometers: Can import OSM data using both miles or kilometers. Tested using OSM files for both US (Delaware: http://download.geofabrik.de/osm/north-america/us/) and Europe (Liechtenstein: http://download.geofabrik.de/osm/europe/)
+* ATTENTION (Bug Info): Development was started on creating SHORTCUT relationships between crossroads to optimize routing. However, this is still in progress. 
+
+
+== How to Test ==
+
+I have created a routing test class (https://github.com/GretaCB/Routing-Project/blob/master/neo4j/src/test/java/org/neo4j/neo4j/OSMRoutingProjectTEST.java) that you can run in Eclipse.
+You will need an OpenStreetMap XML file, also the node ID for a Start and End node.
+
+I used the following for my tests:
+
+Delaware:
+Start Node 178741192 http://www.openstreetmap.org/browse/node/178741192
+End Node 178722292 http://www.openstreetmap.org/browse/node/178722292
+
+Liechtenstein:
+Start Node 278451834 http://www.openstreetmap.org/browse/node/278451834
+End Node 268222979 http://www.openstreetmap.org/browse/node/268222979
+ 
+== Dependencies used in project's pom.xml ==
+
+StAX API
+--------------------------
+<dependency>
+	<groupId>stax</groupId>
+	<artifactId>stax-api</artifactId>
+	<version>1.0.1</version>
+</dependency>
+--------------------------
+
+StringUtils: used for obtaining speed limit in miles from the XML file (http://commons.apache.org/lang/api-2.5/org/apache/commons/lang/StringUtils.html)
+--------------------------
+  <dependency>
+	<groupId>commons-lang</groupId>
+	<artifactId>commons-lang</artifactId>
+	<version>2.5</version>
+</dependency>
+--------------------------
+
+
+Neo4j
+--------------------------
+   <dependency> 
+<groupId>org.neo4j</groupId> 
+<artifactId>neo4j-spatial</artifactId>
+<version>0.9-SNAPSHOT</version> 
+</dependency>
+--------------------------
+Note: neo4j-spatial has a mandatory dependency on GremlinGroovyPipeline from the
+com.tinkerpop.gremlin.groovy package. The dependency in neo4j is type 'provided', so when using
+neo4j-spatial in your own Java project, make sure to add the following dependency to your pom.xml, too.
+--------------------------
+        <dependency>
+            <groupId>com.tinkerpop.gremlin</groupId>
+            <artifactId>gremlin-groovy</artifactId>
+            <version>1.4</version>
+            <type>jar</type>
+            <exclusions>
+        <!-- Sail support not needed -->
+                <exclusion>
+                    <groupId>com.tinkerpop.blueprints</groupId>
+                    <artifactId>blueprints-sail-graph</artifactId>
+                </exclusion>
+        <!-- Maven support in groovy not needed -->
+                <exclusion>
+                    <groupId>org.codehaus.groovy.maven</groupId>
+                    <artifactId>gmaven-plugin</artifactId>
+                </exclusion>
+        <!-- "readline" not needed - we only expose gremlin through webadmin -->
+                <exclusion>
+                    <groupId>jline</groupId>
+                    <artifactId>jline</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+--------------------------
+If the dependency is omitted, neo4j-spatial will probably throw an exception like this:
+--------------------------
+java.lang.NoClassDefFoundError: com/tinkerpop/gremlin/groovy/GremlinGroovyPipeline
+at java.lang.ClassLoader.defineClass1(Native Method)
+at java.lang.ClassLoader.defineClass(ClassLoader.java:634)
+at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
+at java.net.URLClassLoader.defineClass(URLClassLoader.java:277)
+at java.net.URLClassLoader.access$000(URLClassLoader.java:73)
+at java.net.URLClassLoader$1.run(URLClassLoader.java:212)
+at java.security.AccessController.doPrivileged(Native Method)
+at java.net.URLClassLoader.findClass(URLClassLoader.java:205)
+at java.lang.ClassLoader.loadClass(ClassLoader.java:321)
+at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:294)
+at java.lang.ClassLoader.loadClass(ClassLoader.java:266)
+at org.neo4j.gis.spatial.indexprovider.LayerNodeIndex.query(LayerNodeIndex.java:237)
+--------------------------
