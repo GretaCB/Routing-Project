@@ -38,38 +38,17 @@ public class OSMRouting{
 	    	System.out.println("In createRoute method...");
 	    	EstimateEvaluator<Double> estimateEval = CommonEvaluators.geoEstimateEvaluator(
 	    	            "lat", "lon" );
-	    	System.out.println("After EstimateEvaluator");
 	    	
 	    	Expander relExpander = Traversal.expanderForTypes(
 	                RelTypes.ONEWAY_NEXT, Direction.OUTGOING, RelTypes.BIDIRECTIONAL_NEXT, Direction.BOTH );
 	    	relExpander.add( RelTypes.ONEWAY_NEXT, Direction.OUTGOING );
 	    	relExpander.add( RelTypes.BIDIRECTIONAL_NEXT, Direction.BOTH );
-	    	System.out.println("After relationship expander");
 	    	
 	    	CostEvaluator<Double> costEval = CommonEvaluators.doubleCostEvaluator("distance_in_meters");
-	    	System.out.println("After Cost Evaluator");
 	    	
 	    	PathFinder<WeightedPath> finder = GraphAlgoFactory.aStar(
 	               relExpander , costEval, estimateEval );
-	    	System.out.println("After PathFinder");
 	    	
-	    	//String startNodeID = "278451834";
-			//String endNodeID = "268222979";
-			/*
-			JFrame frame = new JFrame("Nodes to Route:");
-			startNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the Start Node: ");
-			endNodeID = JOptionPane.showInputDialog(frame, "Enter nodeID for the End Node: ");
-		  	*/
-	    	/*
-	    	//delaware nodes to route...
-			Node startNode = OSMRoutingImporter.getOsmNode("178741192");
-			Node endNode = OSMRoutingImporter.getOsmNode("178722292");
-			*/
-	    	/*
-	    	//liechtenstein nodes to route
-	    	Node startNode = OSMRoutingImporter.getOsmNode("278451834");
-			Node endNode = OSMRoutingImporter.getOsmNode("268222979");
-			*/
 	    	
 	    	//Test class nodes to route (passed from constructor)
 			Node startNode = OSMRoutingImporter.getOsmNode(startNodeID);

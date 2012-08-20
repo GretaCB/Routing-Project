@@ -12,8 +12,15 @@ public class OSMRoutingImporterTEST {
 	 */
 	public static String graphDbPath = "target/osmImport-db";
 	public static String osmXmlFilePath = "C:\\Users\\Carol\\Desktop\\GSoC\\osm\\liechtenstein.osm";
+	//liechtenstein test nodes to route...
 	public static String startNodeID = "278451834";
 	public static String endNodeID = "268222979";
+	
+	/*
+	//delaware test nodes to route...
+	String startNode = "178741192";
+	String endNode = "178722292";
+	*/
 	
 	public static GraphDatabaseService graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( graphDbPath );
 	
